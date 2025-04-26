@@ -11,7 +11,6 @@ use sui::table::{Self,Table};
 use sui::event::emit;
 use contract::profile::{Profile,add_demo_to_profile};
 use contract::admin::{AdminList,get_admin_addresses};
-use contract::admin;
 
 //=====Error Codes=====
 const EInvalidCap: u64 = 0;
@@ -19,6 +18,7 @@ const ENoAccess: u64 = 1;
 const EDuplicate: u64 = 2;
 const MARKER: u64 = 3;
 const ERROR_PROFILE_EXISTS :u64 = 4;
+const EDEMO_NOT_EXISTS:u64 = 5;
 
 
 //=====Structs=====
@@ -34,6 +34,7 @@ public struct Cap has key {
     demo_id: ID,
 }
 
+
 public struct DemoPool has key {
     id: UID,
     demos: Table<ID,address>,
@@ -45,6 +46,12 @@ public struct DemoCreated has copy,drop {
     name: String,
     des: String,
     owner: address
+}
+
+public struct DemoRequest has copy,drop {
+    des: String,
+    demo_id: ID,
+    visitor: address
 }
 
 
@@ -61,7 +68,7 @@ fun init(ctx: &mut TxContext) {
 
 public fun create_demo(name: String,des:String, pool:&mut DemoPool, profile:&mut Profile,  ctx: &mut TxContext): Cap {
     let owner = ctx.sender();
-    let mut demo = Demo {
+    let demo = Demo {
         id: object::new(ctx),
         visitor_list: vector::empty(),
         name: name,
@@ -104,7 +111,15 @@ public fun remove_visitor_by_user(demo: &mut Demo, cap: &Cap, account: address) 
     demo.visitor_list = demo.visitor_list.filter!(|x| x != account);
 }
 
-
+public fun request_demo(demo: &mut Demo, des: String, ctx: &mut TxContext) {
+    let visitor = ctx.sender();
+    assert!(!demo.visitor_list.contains(&visitor), ERROR_PROFILE_EXISTS);
+    emit(DemoRequest {
+        des: des,
+        demo_id: demo.id.to_inner(),
+        visitor: visitor,
+    });
+}
 
 public fun namespace(demo: &Demo): vector<u8> {
     demo.id.to_bytes()
@@ -130,6 +145,13 @@ entry fun seal_approve(id: vector<u8>, demo: &Demo, adminlist: &AdminList,ctx: &
 public fun publish(allowlist: &mut Demo, cap: &Cap, blob_id: String) {
     assert!(cap.demo_id == object::id(allowlist), EInvalidCap);
     df::add(&mut allowlist.id, blob_id, MARKER);
+}
+
+//=====getter=====
+public fun get_demo_owner(demo_id: ID, pool:&DemoPool): address {
+    assert!(table::contains(&pool.demos, demo_id), EDEMO_NOT_EXISTS);
+    let address = table::borrow(&pool.demos, demo_id);
+    *address
 }
 
 #[test_only]

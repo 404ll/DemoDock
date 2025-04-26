@@ -3,8 +3,6 @@ module contract::admin;
 
 use sui::vec_set::VecSet;
 use sui::vec_set;
-use std::address;
-
 
 public struct SuperAdminCap has key {
     id: UID,
@@ -28,7 +26,7 @@ fun init(ctx: &mut TxContext) {
     transfer::share_object(admin_list);
 }
 
-public fun set_admin(
+public fun add_admin(
     _super_admin: &SuperAdminCap,
     admin_list: &mut AdminList,
     account: address,

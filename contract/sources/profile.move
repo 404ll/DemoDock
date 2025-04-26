@@ -1,11 +1,10 @@
 module contract::profile {
+    
     use std::string::String;
-    use std::vector;
     use sui::event::emit;
-    use std::vector::remove;
 
-    const ERROR_PROFILE_EXISTS :u64 = 4;
-    const ERROR_PROFILE_NOT_EXISTS :u64 = 5;
+const ERROR_PROFILE_EXISTS :u64 = 4;
+const ERROR_PROFILE_NOT_EXISTS :u64 = 5;
 
 public struct Profile has key {
     id: UID,
