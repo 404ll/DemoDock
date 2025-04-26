@@ -59,7 +59,7 @@ fun init(ctx: &mut TxContext) {
     transfer::share_object(pool);
 }
 
-public fun create_demo(name: String,des:String, pool:&mut DemoPool, profile:&mut Profile, admin_list: &AdminList, ctx: &mut TxContext): Cap {
+public fun create_demo(name: String,des:String, pool:&mut DemoPool, profile:&mut Profile,  ctx: &mut TxContext): Cap {
     let owner = ctx.sender();
     let mut demo = Demo {
         id: object::new(ctx),
@@ -67,10 +67,6 @@ public fun create_demo(name: String,des:String, pool:&mut DemoPool, profile:&mut
         name: name,
         des: des,
     };
-    
-    //将已有的管理员添加到访问者列表
-    let adminlist = get_admin_addresses( admin_list);
-    demo.visitor_list.append(adminlist);
 
     let cap = Cap {
         id: object::new(ctx),
@@ -93,8 +89,8 @@ public fun create_demo(name: String,des:String, pool:&mut DemoPool, profile:&mut
     cap
 }
 
-entry fun create_demo_entry(name: String, des: String,pool:&mut DemoPool,profile:&mut Profile,admin_list: &AdminList,ctx: &mut TxContext) {
-    transfer::transfer(create_demo(name,des,pool, profile,admin_list,ctx), ctx.sender());
+entry fun create_demo_entry(name: String, des: String,pool:&mut DemoPool,profile:&mut Profile,ctx: &mut TxContext) {
+    transfer::transfer(create_demo(name,des,pool, profile,ctx), ctx.sender());
 }
 
 public fun add_visitor_by_user(demo: &mut Demo, cap: &Cap, account: address) {
@@ -110,22 +106,25 @@ public fun remove_visitor_by_user(demo: &mut Demo, cap: &Cap, account: address) 
 
 
 
-
 public fun namespace(demo: &Demo): vector<u8> {
     demo.id.to_bytes()
 }
 
-fun approve_internal(caller: address, id: vector<u8>, demo: &Demo): bool {
+fun approve_internal(caller: address, id: vector<u8>, demo: &Demo,adminlist: &AdminList): bool {
     let namespace = namespace(demo);
     if (!is_prefix(namespace, id)) {
         return false
     };
-
-    demo.visitor_list.contains(&caller)
+    let admin_list = get_admin_addresses(adminlist);
+    if (admin_list.contains(&caller)) {
+        return true
+    }else{
+        demo.visitor_list.contains(&caller)
+    }
 }
 
-entry fun seal_approve(id: vector<u8>, demo: &Demo, ctx: &TxContext) {
-    assert!(approve_internal(ctx.sender(), id, demo), ENoAccess);
+entry fun seal_approve(id: vector<u8>, demo: &Demo, adminlist: &AdminList,ctx: &TxContext) {
+    assert!(approve_internal(ctx.sender(), id, demo,adminlist), ENoAccess);
 }
 
 public fun publish(allowlist: &mut Demo, cap: &Cap, blob_id: String) {
