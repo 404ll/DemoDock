@@ -2,15 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 
-module contract::allowlist;
+module contract::demo;
 
 use std::string::String;
 use sui::dynamic_field as df;
 use contract::utils::is_prefix;
 use sui::table::{Self,Table};
 use sui::event::emit;
-use std::address;
-
+use contract::profile::{Profile,add_demo_to_profile};
 //=====Error Codes=====
 const EInvalidCap: u64 = 0;
 const ENoAccess: u64 = 1;
@@ -55,7 +54,7 @@ fun init(ctx: &mut TxContext) {
     transfer::share_object(pool);
 }
 
-public fun create_allowlist(name: String,des:String, pool:&mut DemoPool, ctx: &mut TxContext): Cap {
+public fun create_demo(name: String,des:String, pool:&mut DemoPool, profile:&mut Profile,ctx: &mut TxContext): Cap {
     let owner = ctx.sender();
     let demo = Demo {
         id: object::new(ctx),
@@ -70,6 +69,7 @@ public fun create_allowlist(name: String,des:String, pool:&mut DemoPool, ctx: &m
     };
 
     let demo_id = demo.id.to_inner();
+    add_demo_to_profile(profile, cap.demo_id);
     assert!(!table::contains(&pool.demos, demo_id), ERROR_PROFILE_EXISTS);
     table::add(&mut pool.demos, demo_id, owner);
 
@@ -84,9 +84,10 @@ public fun create_allowlist(name: String,des:String, pool:&mut DemoPool, ctx: &m
     cap
 }
 
-entry fun create_allowlist_entry(name: String, des: String,pool:&mut DemoPool,ctx: &mut TxContext) {
-    transfer::transfer(create_allowlist(name,des,pool, ctx), ctx.sender());
+entry fun create_demo_entry(name: String, des: String,pool:&mut DemoPool,profile:&mut Profile,ctx: &mut TxContext) {
+    transfer::transfer(create_demo(name,des,pool, profile,ctx), ctx.sender());
 }
+
 
 public fun add(demo: &mut Demo, cap: &Cap, account: address) {
     assert!(cap.demo_id == object::id(demo), EInvalidCap);
@@ -94,9 +95,10 @@ public fun add(demo: &mut Demo, cap: &Cap, account: address) {
     demo.list.push_back(account);
 }
 
-public fun remove(allowlist: &mut Demo, cap: &Cap, account: address) {
-    assert!(cap.demo_id == object::id(allowlist), EInvalidCap);
-    allowlist.list = allowlist.list.filter!(|x| x != account);
+public fun remove(demo: &mut Demo, cap: &Cap, account: address) {
+
+    assert!(cap.demo_id == object::id(demo), EInvalidCap);
+    demo.list = demo.list.filter!(|x| x != account);
 }
 
 

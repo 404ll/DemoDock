@@ -2,8 +2,10 @@ module contract::profile {
     use std::string::String;
     use std::vector;
     use sui::event::emit;
+    use std::vector::remove;
 
     const ERROR_PROFILE_EXISTS :u64 = 4;
+    const ERROR_PROFILE_NOT_EXISTS :u64 = 5;
 public struct Profile has key {
     id: UID,
     name: String,
@@ -47,5 +49,12 @@ public fun create_profile( name: String,state:&mut State, ctx: &mut TxContext,) 
     });
     transfer::transfer(profile,ctx.sender());
 }
+
+public fun add_demo_to_profile(profile: &mut Profile, demo: ID,) {
+    assert!(!vector::contains(&profile.demos, &demo), ERROR_PROFILE_EXISTS);
+    vector::push_back(&mut profile.demos, demo);
+}
+
+
 
 }
