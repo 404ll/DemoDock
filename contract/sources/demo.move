@@ -10,6 +10,9 @@ use contract::utils::is_prefix;
 use sui::table::{Self,Table};
 use sui::event::emit;
 use contract::profile::{Profile,add_demo_to_profile};
+use contract::admin::{AdminList,get_admin_addresses};
+use contract::admin;
+
 //=====Error Codes=====
 const EInvalidCap: u64 = 0;
 const ENoAccess: u64 = 1;
@@ -23,7 +26,7 @@ public struct Demo has key {
     id: UID,
     name: String,
     des: String,
-    list: vector<address>,
+    visitor_list: vector<address>,
 }
 
 public struct Cap has key {
@@ -33,7 +36,7 @@ public struct Cap has key {
 
 public struct DemoPool has key {
     id: UID,
-    demos: Table<ID,address>
+    demos: Table<ID,address>,
 }
 
 //=====Events=====
@@ -47,21 +50,27 @@ public struct DemoCreated has copy,drop {
 
 //=====Functions=====
 fun init(ctx: &mut TxContext) {
+
     let pool = DemoPool {
         id: object::new(ctx),
         demos: table::new(ctx),
+
     };
     transfer::share_object(pool);
 }
 
-public fun create_demo(name: String,des:String, pool:&mut DemoPool, profile:&mut Profile,ctx: &mut TxContext): Cap {
+public fun create_demo(name: String,des:String, pool:&mut DemoPool, profile:&mut Profile, admin_list: &AdminList, ctx: &mut TxContext): Cap {
     let owner = ctx.sender();
-    let demo = Demo {
+    let mut demo = Demo {
         id: object::new(ctx),
-        list: vector::empty(),
+        visitor_list: vector::empty(),
         name: name,
         des: des,
     };
+    
+    //将已有的管理员添加到访问者列表
+    let adminlist = get_admin_addresses( admin_list);
+    demo.visitor_list.append(adminlist);
 
     let cap = Cap {
         id: object::new(ctx),
@@ -84,22 +93,21 @@ public fun create_demo(name: String,des:String, pool:&mut DemoPool, profile:&mut
     cap
 }
 
-entry fun create_demo_entry(name: String, des: String,pool:&mut DemoPool,profile:&mut Profile,ctx: &mut TxContext) {
-    transfer::transfer(create_demo(name,des,pool, profile,ctx), ctx.sender());
+entry fun create_demo_entry(name: String, des: String,pool:&mut DemoPool,profile:&mut Profile,admin_list: &AdminList,ctx: &mut TxContext) {
+    transfer::transfer(create_demo(name,des,pool, profile,admin_list,ctx), ctx.sender());
 }
 
-
-public fun add(demo: &mut Demo, cap: &Cap, account: address) {
+public fun add_visitor_by_user(demo: &mut Demo, cap: &Cap, account: address) {
     assert!(cap.demo_id == object::id(demo), EInvalidCap);
-    assert!(!demo.list.contains(&account), EDuplicate);
-    demo.list.push_back(account);
+    assert!(!demo.visitor_list.contains(&account), EDuplicate);
+    demo.visitor_list.push_back(account);
 }
 
-public fun remove(demo: &mut Demo, cap: &Cap, account: address) {
-
+public fun remove_visitor_by_user(demo: &mut Demo, cap: &Cap, account: address) {
     assert!(cap.demo_id == object::id(demo), EInvalidCap);
-    demo.list = demo.list.filter!(|x| x != account);
+    demo.visitor_list = demo.visitor_list.filter!(|x| x != account);
 }
+
 
 
 
@@ -107,17 +115,17 @@ public fun namespace(demo: &Demo): vector<u8> {
     demo.id.to_bytes()
 }
 
-fun approve_internal(caller: address, id: vector<u8>, allowlist: &Demo): bool {
-    let namespace = namespace(allowlist);
+fun approve_internal(caller: address, id: vector<u8>, demo: &Demo): bool {
+    let namespace = namespace(demo);
     if (!is_prefix(namespace, id)) {
         return false
     };
 
-    allowlist.list.contains(&caller)
+    demo.visitor_list.contains(&caller)
 }
 
-entry fun seal_approve(id: vector<u8>, allowlist: &Demo, ctx: &TxContext) {
-    assert!(approve_internal(ctx.sender(), id, allowlist), ENoAccess);
+entry fun seal_approve(id: vector<u8>, demo: &Demo, ctx: &TxContext) {
+    assert!(approve_internal(ctx.sender(), id, demo), ENoAccess);
 }
 
 public fun publish(allowlist: &mut Demo, cap: &Cap, blob_id: String) {
@@ -133,7 +141,7 @@ public fun new_allowlist_for_testing(ctx: &mut TxContext): Demo {
         id: object::new(ctx),
         name: utf8(b"test"),
         des: utf8(b"this is a test"),
-        list: vector::empty(),
+        visitor_list: vector::empty(),
     }
 }
 
