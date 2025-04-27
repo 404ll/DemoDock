@@ -6,7 +6,6 @@ module contract::demo;
 
 use std::string::String;
 use sui::dynamic_field as df;
-use contract::utils::is_prefix;
 use sui::table::{Self,Table};
 use sui::event::emit;
 use contract::profile::{Profile,add_demo_to_profile};
@@ -14,7 +13,6 @@ use contract::admin::{AdminList,get_admin_addresses};
 
 //=====Error Codes=====
 const EInvalidCap: u64 = 0;
-const ENoAccess: u64 = 1;
 const EDuplicate: u64 = 2;
 const MARKER: u64 = 3;
 const ERROR_PROFILE_EXISTS :u64 = 4;
@@ -81,7 +79,7 @@ public fun create_demo(name: String,des:String, pool:&mut DemoPool, profile:&mut
     };
 
     let demo_id = demo.id.to_inner();
-    add_demo_to_profile(profile, cap.demo_id);
+    add_demo_to_profile(profile, cap.demo_id,ctx);
     assert!(!table::contains(&pool.demos, demo_id), ERROR_PROFILE_EXISTS);
     table::add(&mut pool.demos, demo_id, owner);
 
@@ -125,11 +123,7 @@ public fun namespace(demo: &Demo): vector<u8> {
     demo.id.to_bytes()
 }
 
-fun approve_internal(caller: address, id: vector<u8>, demo: &Demo,adminlist: &AdminList): bool {
-    let namespace = namespace(demo);
-    if (!is_prefix(namespace, id)) {
-        return false
-    };
+public fun approve_internal(caller: address,demo: &Demo,adminlist: &AdminList): bool {
     let admin_list = get_admin_addresses(adminlist);
     if (admin_list.contains(&caller)) {
         return true
@@ -138,13 +132,10 @@ fun approve_internal(caller: address, id: vector<u8>, demo: &Demo,adminlist: &Ad
     }
 }
 
-entry fun seal_approve(id: vector<u8>, demo: &Demo, adminlist: &AdminList,ctx: &TxContext) {
-    assert!(approve_internal(ctx.sender(), id, demo,adminlist), ENoAccess);
-}
 
-public fun publish(allowlist: &mut Demo, cap: &Cap, blob_id: String) {
-    assert!(cap.demo_id == object::id(allowlist), EInvalidCap);
-    df::add(&mut allowlist.id, blob_id, MARKER);
+public fun publish(demo: &mut Demo, cap: &Cap, blob_id: String) {
+    assert!(cap.demo_id == object::id(demo), EInvalidCap);
+    df::add(&mut demo.id, blob_id, MARKER);
 }
 
 //=====getter=====
@@ -154,30 +145,8 @@ public fun get_demo_owner(demo_id: ID, pool:&DemoPool): address {
     *address
 }
 
-#[test_only]
-public fun new_allowlist_for_testing(ctx: &mut TxContext): Demo {
-    use std::string::utf8;
-
-    Demo {
-        id: object::new(ctx),
-        name: utf8(b"test"),
-        des: utf8(b"this is a test"),
-        visitor_list: vector::empty(),
-    }
-}
 
 #[test_only]
-public fun new_cap_for_testing(ctx: &mut TxContext, demo: &Demo): Cap {
-    Cap {
-        id: object::new(ctx),
-        demo_id: object::id(demo),
-    }
-}
-
-#[test_only]
-public fun destroy_for_testing(demo: Demo, cap: Cap) {
-    let Demo { id, .. } = demo;
-    object::delete(id);
-    let Cap { id, .. } = cap;
-    object::delete(id);
+public fun init_testing(ctx: &mut TxContext) {
+    init(ctx);
 }

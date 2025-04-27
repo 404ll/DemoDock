@@ -2,6 +2,7 @@ module contract::profile {
     
     use std::string::String;
     use sui::event::emit;
+    
 
 const ERROR_PROFILE_EXISTS :u64 = 4;
 const ERROR_PROFILE_NOT_EXISTS :u64 = 5;
@@ -31,7 +32,7 @@ fun init(ctx: &mut TxContext) {
     transfer::share_object(state)   
 }
 
-public fun create_profile( name: String,state:&mut State, ctx: &mut TxContext,) {
+public fun create_profile(name: String,state:&mut State, ctx: &mut TxContext,) {
     
     let profile = Profile {
         id: object::new(ctx),
@@ -51,9 +52,15 @@ public fun create_profile( name: String,state:&mut State, ctx: &mut TxContext,) 
     transfer::transfer(profile,ctx.sender());
 }
 
-public fun add_demo_to_profile(profile: &mut Profile, demo: ID,) {
+public fun add_demo_to_profile(profile: &mut Profile, demo: ID, _ctx: &mut TxContext) {
     assert!(!vector::contains(&profile.demos, &demo), ERROR_PROFILE_NOT_EXISTS);
     vector::push_back(&mut profile.demos, demo);
 }
 
+
+//helper fun
+#[test_only]
+public fun init_testing(ctx:&mut TxContext){
+    init(ctx);
+}
 }
