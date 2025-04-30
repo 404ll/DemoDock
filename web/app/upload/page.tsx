@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -9,16 +8,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { FileUploader } from "@/components/file-uploader"
-import { Check, Github, Info, Plus, X } from "lucide-react"
+import { Plus, X, Check, Github } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import EncryptedUploader from "@/components/upload/EncryptedUploader"
 
 export default function CreatePage() {
   const router = useRouter()
-  const [isPrivate, setIsPrivate] = useState(false)
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -58,12 +54,15 @@ export default function CreatePage() {
     }, 1500)
   }
 
+  // 这里应替换为真实接口获取 policyObject
+  const policyObject = "your_policy_object_hex_here"
+
   return (
     <div className="container py-8">
       <div className="mx-auto max-w-3xl">
         <div className="mb-6">
           <h1 className="text-3xl font-bold">Create New Project</h1>
-          <p className="text-muted-foreground">Share your demo with the community and control who can access it</p>
+          <p className="text-muted-foreground">Share your demo with the community and all files will be encrypted by default</p>
         </div>
 
         {showSuccess ? (
@@ -132,59 +131,13 @@ export default function CreatePage() {
                 </div>
 
                 <div className="space-y-4">
-                  <Label>Project Files</Label>
-                  <FileUploader />
-                </div>
-
-                <div className="space-y-4">
-                  <Label>Cover Image</Label>
-                  <FileUploader accept="image/*" maxFiles={1} />
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label htmlFor="private">Private Project</Label>
-                      <p className="text-sm text-muted-foreground">Control who can access your project content</p>
-                    </div>
-                    <Switch id="private" checked={isPrivate} onCheckedChange={setIsPrivate} />
-                  </div>
-
-                  {isPrivate && (
-                    <div className="rounded-lg border p-4">
-                      <div className="flex items-start gap-4">
-                        <Info className="mt-0.5 h-4 w-4 text-muted-foreground" />
-                        <div className="space-y-3">
-                          <p className="text-sm">
-                            Your project will be encrypted using Seal. Only users you approve will be able to access the
-                            content.
-                          </p>
-                          <div className="space-y-2">
-                            <Label htmlFor="access-type">Access Type</Label>
-                            <Select defaultValue="manual">
-                              <SelectTrigger id="access-type">
-                                <SelectValue placeholder="Select access type" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="manual">Manual Approval</SelectItem>
-                                <SelectItem value="automatic">Automatic (NFT Holders)</SelectItem>
-                                <SelectItem value="token">Token Gated</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  <Label>Project Files (Encrypted Upload)</Label>
+                  <EncryptedUploader policyObject={policyObject} onUploadComplete={(results) => console.log(results)} />
                 </div>
               </CardContent>
               <CardFooter className="flex justify-between">
-                <Button variant="outline" type="button" onClick={() => router.push("/explore")}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? "Creating..." : "Create Project"}
-                </Button>
+                <Button variant="outline" type="button" onClick={() => router.push("/explore")}>Cancel</Button>
+                <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Creating..." : "Create Project"}</Button>
               </CardFooter>
             </Card>
           </form>
