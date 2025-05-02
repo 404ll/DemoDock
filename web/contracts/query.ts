@@ -49,3 +49,13 @@ export const getEncryptedObject=async(id:string,arrayBuffer:ArrayBuffer)=>{
 
   return encryptedObject;
 }
+
+//query all Demos
+export const getAllDemo = async () => {
+
+};
+
+//query all Profiles
+export const getAllProfile = async () => {
+
+};
