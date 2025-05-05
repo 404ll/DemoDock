@@ -20,9 +20,13 @@ public struct State has key {
 }
 
 public struct ProfileCreated has copy, drop {
-    id: ID,
-    name: String,
+    owner: address,
+    id: ID
 }
+// public struct ProfileCreated has copy, drop {    
+//     id: ID,
+//     name: string,
+// }
 
 fun init(ctx: &mut TxContext) {
     let state = State {
@@ -46,8 +50,8 @@ public fun create_profile(name: String, state: &mut State, ctx: &mut TxContext) 
     table::add(&mut state.profiles, owner, profile_id);
 
     emit(ProfileCreated {
-        id: profile_id,
-        name: profile.name,
+        owner: owner,
+        id: profile_id
     });
 
     transfer::transfer(profile, ctx.sender());

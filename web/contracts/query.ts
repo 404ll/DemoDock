@@ -1,38 +1,16 @@
 import { isValidSuiAddress } from "@mysten/sui/utils";
-import { SuiObjectResponse } from "@mysten/sui/client";
+import { SuiObjectResponse, SuiParsedData } from "@mysten/sui/client";
 import { categorizeSuiObjects, CategorizedObjects } from "@/utils/assetsHelpers";
 import { suiClient ,networkConfig,createBetterTxFactory} from "./index";
 import { useSuiClient } from "@mysten/dapp-kit";
 import { getAllowlistedKeyServers, SealClient } from "@mysten/seal";
 import { profile } from "console";
+import { Demo, DemoPool, Profile, ProfileCreated, State } from "@/types";
+import { Move } from "lucide-react";
+import { get } from "http";
 
 export   const SUI_VIEW_OBJECT_URL = `https://suiscan.xyz/testnet/object`;
 
-export const getUserProfile = async (address: string): Promise<CategorizedObjects> => {
-  if (!isValidSuiAddress(address)) {
-    throw new Error("Invalid Sui address");
-  }
-
-  let hasNextPage = true;
-  let nextCursor: string | null = null;
-  let allObjects: SuiObjectResponse[] = [];
-
-  while (hasNextPage) {
-    const response = await suiClient.getOwnedObjects({
-      owner: address,
-      options: {
-        showContent: true,
-      },
-      cursor: nextCursor,
-    });
-
-    allObjects = allObjects.concat(response.data);
-    hasNextPage = response.hasNextPage;
-    nextCursor = response.nextCursor ?? null;
-  }
-
-  return categorizeSuiObjects(allObjects);
-};
 
 export const getEncryptedObject=async(id:string,arrayBuffer:ArrayBuffer)=>{
   const packageId =networkConfig.testnet.variables.Package;
@@ -51,17 +29,151 @@ export const getEncryptedObject=async(id:string,arrayBuffer:ArrayBuffer)=>{
   return encryptedObject;
 }
 
+//query DemoPool
+export const getDemoPool = async () => {
+  const events = await suiClient.queryEvents({
+    query:{
+      MoveEventType: `${networkConfig.testnet.variables.Package}::demo::DemoCreated`,
+    }
+  });
+  const pool: DemoPool = {
+    id: networkConfig.testnet.variables.DemoPool,
+    demos:[]
+  }
+  events.data.map((event) => {
+    const eventContent = event.parsedJson as ProfileCreated;
+    pool.demos.push(eventContent);
+  });
+  return pool;
+}
+
+
+//query demo
+export const getdemoByid = async(demo_id:string)=>{
+  if (!isValidSuiAddress(demo_id)) {
+    throw new Error("Invalid Sui address");
+  }
+  const DemoContent = await suiClient.getObject({
+    id: demo_id,
+    options: {
+      showContent: true,
+    },
+  });
+  if (!DemoContent) {
+    throw new Error("Demo not found");
+  }
+  const profileParseData = DemoContent.data?.content as SuiParsedData;
+  if(!('fields' in profileParseData)){
+    throw new Error("Demo not found");
+  }
+  const demo = profileParseData.fields as unknown as Demo;
+  if(!profile) {
+    throw new Error("Demo not found");
+  }
+  return demo;
+}
+
 //query all Demos
 export const getAllDemo = async () => {
-
+  const pool = await getDemoPool();
+  const demoPromises = pool.demos.map(async (oneDemo)=>{
+    const demo = getdemoByid(oneDemo.id);
+    return demo
+  })
+  const demos = await Promise.all(demoPromises);
+  return demos;
 };
+
+//query State
+export const getState = async () => {
+  const events = await suiClient.queryEvents({
+    query:{
+      MoveEventType: `${networkConfig.testnet.variables.Package}::profile::ProfileCreated`,
+    }
+  });
+  const state : State = {
+    id: networkConfig.testnet.variables.State,
+    profiles: [],
+  }
+  events.data.map((event) => {
+    const eventContent = event.parsedJson as ProfileCreated;
+    state.profiles.push(eventContent);
+  });
+  return state;
+}
+
 
 //query all Profiles
 export const getAllProfile = async () => {
+  const state = await getState();
+  const profilePromises = state.profiles.map(async (oneProfile) => {
+    const profile = await getProfile(oneProfile.id);
+    return profile;
+  });
 
+  const profiles = await Promise.all(profilePromises);
+  return profiles;
 };
 
+
+//获取当前用户的所有Demo
+export const getUserDemo = async (address: string): Promise<Demo[]> => {
+  if (!isValidSuiAddress(address)) {
+    throw new Error("Invalid Sui address");
+  }
+
+  const demosContent = await suiClient.getOwnedObjects({
+    owner: address,
+    filter: {
+      StructType: `${networkConfig.testnet.variables.Package}::demo::Demo`,
+    },
+    options: {
+      showContent: true,
+    },
+  });
+
+  const demos: Demo[] = demosContent.data
+    .map((demo) => {
+      const parsedDemoData = demo.data?.content;
+      if (!parsedDemoData || !("fields" in parsedDemoData)) {
+        return null;
+      }
+      const demoData = parsedDemoData.fields as SuiParsedData;
+      return demoData as unknown as Demo;
+    })
+    .filter((item): item is Demo => item !== null);
+
+  return demos;
+};
+
+
+
 ///Profile
+
+//获取当前用户的Profile
+export const getProfile = async (address: string) => {
+  if (!isValidSuiAddress(address)) {
+    throw new Error("Invalid Sui address");
+  }
+  const profileContent = await suiClient.getObject({
+    id: address,
+    options: {
+      showContent: true,
+    },
+  });
+  if (!profileContent) {
+    throw new Error("Profile not found");
+  }
+  const profileParseData = profileContent.data?.content as SuiParsedData;
+  if(!('fields' in profileParseData)){
+    throw new Error("Profile not found");
+  }
+  const profile = profileParseData.fields as unknown as Profile;
+  if(!profile) {
+    throw new Error("Profile not found");
+  }
+  return profile;
+};
 
 //public fun create_profile(name: String, state: &mut State, ctx: &mut TxContext) {
 //   let profile = Profile {

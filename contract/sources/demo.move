@@ -39,8 +39,6 @@ public struct DemoPool has key {
 //=====Events=====
 public struct DemoCreated has copy, drop {
     id: ID,
-    name: String,
-    des: String,
     owner: address,
 }
 
@@ -86,8 +84,6 @@ public fun create_demo(
 
     emit(DemoCreated {
         id: demo.id.to_inner(),
-        name: demo.name,
-        des: demo.des,
         owner: owner,
     });
 
