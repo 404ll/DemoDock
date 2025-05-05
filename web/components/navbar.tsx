@@ -15,31 +15,6 @@ export function Navbar() {
   const account = useCurrentAccount();
   const [hasAccount, setHasAccount] = useState(false)
 
-  // 模拟检查用户是否有账户
-  const checkUserAccount = () => {
-    // 这里应该是实际检查用户账户的逻辑
-    // 现在用随机值模拟，实际应用中应该从区块链或后端获取
-    return Math.random() > 0.5
-  }
-
-  // 检查账户并设置状态
-  useEffect(() => {
-    if (account) {
-      const accountExists = checkUserAccount()
-      setHasAccount(accountExists)
-      // 如果已连接且有账户，重定向到explore
-      if (accountExists && pathname === "/") {
-        router.push("/explore")
-      }
-    }
-  }, [account, pathname, router])
-
-  // 当路径变化时，检查用户状态
-  useEffect(() => {
-    if (account && hasAccount && pathname === "/") {
-      router.push("/explore")
-    }
-  }, [pathname, account, hasAccount, router])
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -51,7 +26,7 @@ export function Navbar() {
           </Link>
         </div>
 
-        {/* {account && (
+        {account && (
           <nav className="hidden md:flex gap-6">
             <Link
               href="/explore"
@@ -72,7 +47,7 @@ export function Navbar() {
               My Projects
             </Link>
           </nav>
-        )} */}
+        )}
 
         <div className="flex items-center gap-4">
           {account ? (
@@ -86,6 +61,7 @@ export function Navbar() {
                   <span className="sr-only">Profile</span>
                 </Link>
               </Button>
+              <ConnectButton />
             </>
           ) : (
             <ConnectButton />

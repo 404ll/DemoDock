@@ -1,36 +1,65 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import React, { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Check, User } from "lucide-react"
+import { useCurrentAccount } from "@mysten/dapp-kit"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+
+import { useBetterSignAndExecuteTransaction } from '@/hooks/useBetterTx'
+import {
+  createProfile,
+  getProfileByUser,
+} from "@/contracts/query"
 
 export default function CreateAccountPage() {
   const router = useRouter()
+  const account = useCurrentAccount()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const { handleSignAndExecuteTransaction: createProfileHandler } =
+    useBetterSignAndExecuteTransaction({ tx: createProfile })
+
+  const handleCreateProfile = async (name: string) => {
+    if (!account?.address) {
+      alert("Wallet not connected")
+      return
+    }
+
     setIsSubmitting(true)
 
-    // 模拟账户创建
-    setTimeout(() => {
-      setIsSubmitting(false)
-      setShowSuccess(true)
+    createProfileHandler({ name })
+      .onSuccess(async (result) => {
+        console.log("Profile created:", result)
 
-      // 创建成功后重定向到explore页面
-      setTimeout(() => {
-        router.push("/explore")
-      }, 1500)
-    }, 1500)
+        // 查询 Profile 是否写入链上
+        const profile = await getProfileByUser(account.address)
+        console.log("Fetched profile:", profile)
+
+        setShowSuccess(true)
+
+        // 自动跳转到主页或 Demo 创建页（可改）
+        setTimeout(() => {
+          router.push("/explore")
+        }, 3000)
+      })
+      .onError((err) => {
+        console.error("Create profile failed:", err)
+        alert("Profile creation failed. Please try again.")
+      })
+      .execute()
   }
 
   return (
@@ -55,21 +84,23 @@ export default function CreateAccountPage() {
             </Alert>
           </CardContent>
         ) : (
-          <form onSubmit={handleSubmit}>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault()
+              const formData = new FormData(event.currentTarget)
+              const username = formData.get("username") as string
+              handleCreateProfile(username)
+            }}
+          >
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="username">Username</Label>
-                <Input id="username" placeholder="Choose a username" required />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="displayName">Display Name</Label>
-                <Input id="displayName" placeholder="Your name as shown to others" required />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="bio">Bio</Label>
-                <Textarea id="bio" placeholder="Tell us about yourself" rows={3} />
+                <Input
+                  id="username"
+                  name="username"
+                  placeholder="Choose a username"
+                  required
+                />
               </div>
             </CardContent>
 
