@@ -26,9 +26,13 @@ public struct Demo has key {
     visitor_list: vector<address>,
 }
 
+// public struct Cap has key {
+//     id: UID,
+//     demo_id: ID,
+// }
+
 public struct Cap has key {
     id: UID,
-    demo_id: ID,
 }
 
 public struct DemoPool has key {
@@ -74,11 +78,10 @@ public fun create_demo(
 
     let cap = Cap {
         id: object::new(ctx),
-        demo_id: object::id(&demo),
     };
 
     let demo_id = demo.id.to_inner();
-    add_demo_to_profile(profile, cap.demo_id, ctx);
+    add_demo_to_profile(profile, demo_id, ctx);
     assert!(!table::contains(&pool.demos, demo_id), ERROR_PROFILE_EXISTS);
     table::add(&mut pool.demos, demo_id, owner);
 
@@ -87,7 +90,7 @@ public fun create_demo(
         owner: owner,
     });
 
-    transfer::share_object(demo);
+    transfer::transfer(demo, ctx.sender());
     cap
 }
 
@@ -101,14 +104,12 @@ entry fun create_demo_entry(
     transfer::transfer(create_demo(name, des, pool, profile, ctx), ctx.sender());
 }
 
-public fun add_visitor_by_user(demo: &mut Demo, cap: &Cap, account: address) {
-    assert!(cap.demo_id == object::id(demo), EInvalidCap);
+public fun add_visitor_by_user(demo: &mut Demo, account: address, _cap: &Cap) {
     assert!(!demo.visitor_list.contains(&account), EDuplicate);
     demo.visitor_list.push_back(account);
 }
 
-public fun remove_visitor_by_user(demo: &mut Demo, cap: &Cap, account: address) {
-    assert!(cap.demo_id == object::id(demo), EInvalidCap);
+public fun remove_visitor_by_user(demo: &mut Demo, account: address, _cap: &Cap) {
     demo.visitor_list = demo.visitor_list.filter!(|x| x != account);
 }
 
@@ -144,8 +145,7 @@ public fun approve_internal(
     }
 }
 
-public fun publish(demo: &mut Demo, cap: &Cap, blob_id: String) {
-    assert!(cap.demo_id == object::id(demo), EInvalidCap);
+public fun publish(demo: &mut Demo, blob_id: String,_cap: &Cap) {
     df::add(&mut demo.id, blob_id, MARKER);
 }
 

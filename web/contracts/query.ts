@@ -4,13 +4,10 @@ import { categorizeSuiObjects, CategorizedObjects } from "@/utils/assetsHelpers"
 import { suiClient ,networkConfig,createBetterTxFactory} from "./index";
 import { useSuiClient } from "@mysten/dapp-kit";
 import { getAllowlistedKeyServers, SealClient } from "@mysten/seal";
-import { profile } from "console";
+
 import { Demo, DemoPool, Profile, ProfileCreated, State } from "@/types";
-import { Move } from "lucide-react";
-import { get } from "http";
 
 export   const SUI_VIEW_OBJECT_URL = `https://suiscan.xyz/testnet/object`;
-
 
 export const getEncryptedObject=async(id:string,arrayBuffer:ArrayBuffer)=>{
   const packageId =networkConfig.testnet.variables.Package;
@@ -62,12 +59,12 @@ export const getdemoByid = async(demo_id:string)=>{
   if (!DemoContent) {
     throw new Error("Demo not found");
   }
-  const profileParseData = DemoContent.data?.content as SuiParsedData;
-  if(!('fields' in profileParseData)){
+  const demoParseData = DemoContent.data?.content as SuiParsedData;
+  if(!('fields' in demoParseData)){
     throw new Error("Demo not found");
   }
-  const demo = profileParseData.fields as unknown as Demo;
-  if(!profile) {
+  const demo = demoParseData.fields as unknown as Demo;
+  if(!demo) {
     throw new Error("Demo not found");
   }
   return demo;
@@ -142,7 +139,7 @@ export const getUserDemo = async (address: string): Promise<Demo[]> => {
       return demoData as unknown as Demo;
     })
     .filter((item): item is Demo => item !== null);
-
+    console.log("test querydemo",demosContent.data);
   return demos;
 };
 
@@ -150,7 +147,7 @@ export const getUserDemo = async (address: string): Promise<Demo[]> => {
 
 ///Profile
 
-//获取当前用户的Profile
+//通过Profile_id的获取Profile
 export const getProfile = async (address: string) => {
   if (!isValidSuiAddress(address)) {
     throw new Error("Invalid Sui address");
@@ -174,6 +171,44 @@ export const getProfile = async (address: string) => {
   }
   return profile;
 };
+//通过用户地址获得Profile
+export const getProfileByUser = async (address: string) => {
+  if (!isValidSuiAddress(address)) {
+    throw new Error("Invalid Sui address");
+  }
+  
+  const profile = await suiClient.getOwnedObjects({
+    owner: address,
+    filter: {
+      StructType: `${networkConfig.testnet.variables.Package}::profile::Profile`,
+    },
+    options: {
+      showContent: true,
+    },
+  });
+
+  // 处理没有找到 Profile 的情况
+  if (!profile.data || profile.data.length === 0) {
+    throw new Error("No profile found for this address");
+  }
+
+  // 直接获取第一个对象（因为确定只有一个）
+  const profileObj = profile.data[0];
+  
+  // 确保有内容
+  if (!profileObj.data?.content || !("fields" in profileObj.data.content)) {
+    throw new Error("Invalid profile data structure");
+  }
+
+  // 提取并返回 Profile 数据
+  const profileContent = profileObj.data.content;
+  const profileData = profileContent.fields as unknown as Profile;
+  
+  return profileData
+}
+
+
+
 
 //public fun create_profile(name: String, state: &mut State, ctx: &mut TxContext) {
 //   let profile = Profile {
@@ -205,20 +240,6 @@ export const createProfile = createBetterTxFactory<{ name: string;}>((tx, networ
   return tx;
 });
 
-// public fun add_demo_to_profile(profile: &mut Profile, demo: ID, _ctx: &mut TxContext) {
-//   assert!(!vector::contains(&profile.demos, &demo), ERROR_PROFILE_NOT_EXISTS);
-//   vector::push_back(&mut profile.demos, demo);
-// }
-
-export const addDemoToProfile = createBetterTxFactory<{ profile: string; demo: string;}>((tx, networkVariables, { profile, demo }) => {
-  tx.moveCall({
-    package: networkVariables.Package,
-    module: "profile",
-    function: "add_demo_to_profile",
-    arguments: [tx.object(profile), tx.object(demo)]
-});
-  return tx;
-});
 
 ///Admin Functions
 
@@ -280,17 +301,14 @@ export const createDemo = createBetterTxFactory<{ name: string; des: string,prof
   return tx;
 });
 
-// public fun publish(demo: &mut Demo, cap: &Cap, blob_id: String) {
-//   assert!(cap.demo_id == object::id(demo), EInvalidCap);
-//   df::add(&mut demo.id, blob_id, MARKER);
-// }
 
-export const publishDemo = createBetterTxFactory<{ demo: string; cap: string; blob_id: string;}>((tx, networkVariables, { demo, cap, blob_id }) => {
+
+export const publishDemo = createBetterTxFactory<{ demo: string;  blob_id: string;}>((tx, networkVariables, { demo, blob_id }) => {
   tx.moveCall({
     package: networkVariables.Package,
     module: "demo",
     function: "publish",
-    arguments: [tx.object(demo), tx.object(cap), tx.pure.string(blob_id)]
+    arguments: [tx.object(demo),  tx.pure.string(blob_id)]
 });
   return tx;
 });
@@ -300,12 +318,12 @@ export const publishDemo = createBetterTxFactory<{ demo: string; cap: string; bl
 //   assert!(!demo.visitor_list.contains(&account), EDuplicate);
 //   demo.visitor_list.push_back(account);
 // }
-export const addVisitorByUser = createBetterTxFactory<{ demo: string; cap: string; account: string;}>((tx, networkVariables, { demo, cap, account }) => {
+export const addVisitorByUser = createBetterTxFactory<{ demo: string; account: string;}>((tx, networkVariables, { demo, account }) => {
   tx.moveCall({
     package: networkVariables.Package,
     module: "demo",
     function: "add_visitor_by_user",
-    arguments: [tx.object(demo), tx.object(cap), tx.pure.address(account)]
+    arguments: [tx.object(demo), tx.pure.address(account)]
 });
   return tx;
 });
@@ -314,12 +332,12 @@ export const addVisitorByUser = createBetterTxFactory<{ demo: string; cap: strin
 //   assert!(cap.demo_id == object::id(demo), EInvalidCap);
 //   demo.visitor_list = demo.visitor_list.filter!(|x| x != account);
 // }
-export const removeVisitorByUser = createBetterTxFactory<{ demo: string; cap: string; account: string;}>((tx, networkVariables, { demo, cap, account }) => {
+export const removeVisitorByUser = createBetterTxFactory<{ demo: string;  account: string;}>((tx, networkVariables, { demo,  account }) => {
   tx.moveCall({
     package: networkVariables.Package,
     module: "demo",
     function: "remove_visitor_by_user",
-    arguments: [tx.object(demo), tx.object(cap), tx.pure.address(account)]
+    arguments: [tx.object(demo), tx.pure.address(account)]
 });
   return tx;
 });
