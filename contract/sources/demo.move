@@ -87,7 +87,7 @@ public fun create_demo(
         owner: owner,
     });
 
-    transfer::transfer(demo, ctx.sender());
+    transfer::share_object(demo);
     cap
 }
 
