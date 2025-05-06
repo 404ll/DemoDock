@@ -112,7 +112,7 @@ export async function encryptAndUpload(
   const policyObjectBytes = fromHex(policyObject);
   const id = toHex(new Uint8Array([...policyObjectBytes, ...nonce]));
   
-  // 4. 加密文件
+  // 4. 加密文件 (使用正确的属性名)
   const { encryptedObject } = await sealClient.encrypt({
     threshold: 2,
     packageId,
@@ -120,52 +120,57 @@ export async function encryptAndUpload(
     data: fileData,
   });
   
-  // 5. 根据serviceId参数选择服务
-  const service = WALRUS_SERVICES.find(s => s.id === serviceId);
-  if (!service) {
-    throw new Error(`指定的服务 ${serviceId} 不存在`);
+    // 5. 逐个尝试所有可用的Walrus服务
+  let lastError = '';
+  for (const service of WALRUS_SERVICES) {
+    try {
+      console.log(`尝试上传到 ${service.name}`);
+      
+      const publisherUrl = service.publisherUrl;
+      const response = await fetch(`${publisherUrl}/blobs?epochs=1`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/octet-stream',
+        },
+        body: encryptedObject,
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.warn(`${service.name} 上传失败: ${response.status} - ${errorText}`);
+        continue; // 尝试下一个服务
+      }
+      
+      // 解析响应
+      const result = await response.json();
+      let blobId = '';
+      
+      if ('alreadyCertified' in result) {
+        blobId = result.alreadyCertified.blobId;
+        console.log(`文件已存在于 ${service.name}, blobId: ${blobId}`);
+      } else if ('newlyCreated' in result) {
+        blobId = result.newlyCreated.blobObject.blobId;
+        console.log(`成功上传到 ${service.name}, blobId: ${blobId}`);
+      } else {
+        console.warn(`${service.name} 返回未知格式响应`);
+        continue;
+      }
+      
+      // 成功上传
+      return {
+        blobId,
+        fileName: file.name,
+        fileType: file.type || detectMimeType(fileData),
+      };
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error);
+      console.error(`尝试 ${service.name} 时出错:`, error);
+      // 继续尝试下一个服务
+    }
   }
   
-  console.log(`尝试上传到指定服务: ${service.name} (ID: ${serviceId})`);
-  
-  try {
-    const publisherUrl = service.publisherUrl;
-    const response = await fetch(`${publisherUrl}/blobs?epochs=1`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/octet-stream',
-      },
-      body: encryptedObject,
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`${service.name} 上传失败: ${response.status} - ${errorText}`);
-    }
-    
-    // 解析响应
-    const result = await response.json();
-    let blobId = '';
-    
-    if ('alreadyCertified' in result) {
-      blobId = result.alreadyCertified.blobId;
-      console.log(`文件已存在于 ${service.name}, blobId: ${blobId}`);
-    } else if ('newlyCreated' in result) {
-      blobId = result.newlyCreated.blobObject.blobId;
-      console.log(`成功上传到 ${service.name}, blobId: ${blobId}`);
-    } else {
-      throw new Error(`${service.name} 返回未知格式响应`);
-    }
-    
-    // 成功上传
-    return {
-      blobId,
-      fileName: file.name,
-      fileType: file.type || detectMimeType(fileData),
-    };
-  } catch (error) {
-    throw new Error(`上传到 ${service.name} 失败: ${error instanceof Error ? error.message : String(error)}`);
-  }
+  // 所有服务都失败
+  throw new Error(`所有Walrus服务上传失败。最后错误: ${lastError}`);
 }
 
 // 下载并解密文件 - 修复为正确实现
