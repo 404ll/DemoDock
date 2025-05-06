@@ -8,25 +8,47 @@ import { Ship, User } from "lucide-react"
 import { cn } from "@/utils"
 import { useCurrentAccount } from '@mysten/dapp-kit'
 import { ConnectButton } from '@mysten/dapp-kit'
+import { getProfileByUser } from '@/contracts/query'
 
 export function Navbar() {
   const pathname = usePathname()
   const router = useRouter()
   const account = useCurrentAccount();
-  const [hasAccount, setHasAccount] = useState(false)
+  const [DemoAccount, setDemoAccount] = useState("");
+  const DemoAddress = async () => {
+    console.log("DemoAddress12121");
+    try {
+      if (account) {  // 确保 account 存在
+        const profile = await getProfileByUser(account.address);
+        
+        if (profile) {  // 确保 profile 存在
+          setDemoAccount(String(profile.id.id));
+          console.log("用户的个人资料:", profile.id.id);
+          console.log("用户的个人:", String(profile.id.id));
+        } 
+      }
+     
+    } catch (error) {
+      console.error("获取用户资料失败:", error);
+    }
+  }
 
+  useEffect(() => {
+    DemoAddress();
+      console.log(DemoAccount, "DemoAcc111ount");
+ }, [account]); // 添加依赖项，只在account变化时执行
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-2">
           <Ship className="h-6 w-6" />
-          <Link href={account && hasAccount ? "/explore" : "/"} className="text-xl font-bold">
+          <Link href={account && DemoAccount ? "/explore" : "/"} className="text-xl font-bold">
             DemoDock
           </Link>
         </div>
 
-        {account && (
+        {account && DemoAccount&&(
           <nav className="hidden md:flex gap-6">
             <Link
               href="/explore"
@@ -37,26 +59,17 @@ export function Navbar() {
             >
               Home
             </Link>
-            <Link
-              href="/project"
-              className={cn(
-                "text-sm font-medium transition-colors hover:text-primary",
-                pathname === "/projects" ? "text-primary" : "text-muted-foreground",
-              )}
-            >
-              My Projects
-            </Link>
           </nav>
         )}
 
         <div className="flex items-center gap-4">
-          {account ? (
+          {account&& DemoAccount ? (
             <>
               <Button variant="outline" size="sm" asChild>
                 <Link href="/create">Create</Link>
               </Button>
               <Button variant="ghost" size="icon" asChild>
-                <Link href="/project">
+                <Link href="/profile">
                   <User className="h-5 w-5" />
                   <span className="sr-only">Profile</span>
                 </Link>
@@ -70,4 +83,5 @@ export function Navbar() {
       </div>
     </header>
   )
+
 }
