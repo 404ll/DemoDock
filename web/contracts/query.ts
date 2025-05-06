@@ -438,3 +438,17 @@ export const approveInternal = createBetterTxFactory<{ caller: string; demo: str
   return tx;
 });
 
+// public fun get_admin_addresses(admin_list: &AdminList): vector<address> {
+//   vec_set::into_keys(admin_list.admin)
+// }
+
+export const getAdminAddresses = createBetterTxFactory<{}>((tx, networkVariables) => {
+  tx.moveCall({
+    package: networkVariables.Package,
+    module: "admin",
+    function: "get_admin_addresses",
+    arguments: [tx.object(networkVariables.AdminList)]
+});
+  return tx;
+});
+
