@@ -6,7 +6,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { inter } from "./fonts";
 import { Providers } from "./providers";
-
+import { Toaster } from "@/components/ui/toaster";
 
 export const metadata = {
   title: "DemoDock | Where Projects Dock, and Ideas Rock",
@@ -25,6 +25,7 @@ export default function RootLayout({
             <div className="min-h-screen flex flex-col">
               <Navbar />
               <main className="flex-1">{children}</main>
+              <Toaster />
             </div>
         </Providers>
       </body>

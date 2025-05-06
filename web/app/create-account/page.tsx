@@ -37,7 +37,6 @@ export default function CreateAccountPage() {
       alert("Wallet not connected")
       return
     }
-
     setIsSubmitting(true)
 
     createProfileHandler({ name })
