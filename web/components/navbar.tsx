@@ -71,19 +71,25 @@ export function Navbar() {
         )}
 
         <div className="flex items-center gap-4">
-          {account&& DemoAccount ? (
+          {account ? (
             <>
-              <Button variant="outline" size="sm" asChild>
-                <Link href="/create">Create</Link>
-              </Button>
-              <Button variant="outline" size="sm" asChild>
-                <Link href="/profile">Profile</Link>
-              </Button>
-              {/* 只有超级管理员可以看到Admin按钮 */}
+              {/* 超级管理员总是可以看到Admin按钮，不管有没有Profile */}
               {isSuperAdmin && (
                 <Button variant="outline" size="sm" asChild>
                   <Link href="/admin">Admin</Link>
                 </Button>
+              )}
+
+              {/* 只有有Profile的用户可以看到这些按钮 */}
+              {DemoAccount && (
+                <>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href="/create">Create</Link>
+                  </Button>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href="/profile">Profile</Link>
+                  </Button>
+                </>
               )}
               <ConnectButton />
             </>

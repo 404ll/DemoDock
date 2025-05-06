@@ -286,7 +286,6 @@ export const getSuperAdmin = async (address:string) => {
   }else{  
     return true
   }
-
 }
 
 ///Admin Functions
