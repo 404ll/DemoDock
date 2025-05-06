@@ -121,6 +121,9 @@ export const getUserDemo = async (address: string) => {
     throw new Error("Invalid Sui address");
   }
   const profile = await getProfileByUser(address);
+  if (!profile) {
+    throw new Error("Profile is null");
+  }
   const demoPromises = profile.demos.map(async (oneDemo) => {
     const demo = await getdemoByid(oneDemo);
     return demo;
@@ -177,7 +180,7 @@ export const getProfileByUser = async (address: string) => {
 
   // 处理没有找到 Profile 的情况
   if (!profile.data || profile.data.length === 0) {
-    throw new Error("No profile found for this address");
+    return null; 
   }
 
   // 直接获取第一个对象（因为确定只有一个）
