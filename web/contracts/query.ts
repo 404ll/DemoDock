@@ -1,7 +1,7 @@
 import { isValidSuiAddress } from "@mysten/sui/utils";
 import { SuiObjectResponse, SuiParsedData } from "@mysten/sui/client";
 import { categorizeSuiObjects, CategorizedObjects } from "@/utils/assetsHelpers";
-import { suiClient ,networkConfig,createBetterTxFactory} from "./index";
+import { suiClient ,networkConfig,createBetterTxFactory,createBetterDevInspect} from "./index";
 import { useSuiClient } from "@mysten/dapp-kit";
 import { getAllowlistedKeyServers, SealClient } from "@mysten/seal";
 
@@ -404,3 +404,39 @@ export const approveInternal = createBetterTxFactory<{ caller: string; demo: str
 });
   return tx;
 });
+
+// public fun get_profile_by_addresss(state: &State, ctx: &TxContext): Option<ID> {
+//   let address = ctx.sender();
+//   if (table::contains(&state.profiles, address)) {
+//       let profile_id = table::borrow(&state.profiles, address);
+//       option::some(*profile_id)
+//   } else {
+//       option::none()
+//   }
+// }
+
+export const getProfileByAddress = createBetterDevInspect<{ state: string; }, string | null>(
+  (tx, networkVariables, { state }) => {
+    tx.moveCall({
+      package: networkVariables.Package,
+      module: "profile",
+      function: "get_profile_by_addresss",
+      arguments: [tx.object(state)]
+    });
+    return tx;
+  },
+  (res) => {
+    // 解析返回结果
+    if (res.effects.status.status === "success") {
+      const returnValues = res?.results?.[0]?.returnValues;
+      if (returnValues && returnValues.length > 0) {
+        // 检查是否有返回值，并且是否为 Option<ID> 类型
+        const optionValue = returnValues[0];
+        if (optionValue && typeof optionValue === 'object' && 'Some' in optionValue) {
+          return optionValue.Some as string;
+        }
+      }
+    }
+    return null;
+  }
+);
