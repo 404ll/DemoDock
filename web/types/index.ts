@@ -11,7 +11,12 @@ export interface Demo {
     visitor_list:string[];
 }
 
-// public struct Profile has key {
+export interface Project {
+    id: string
+    name: string
+    des: string
+    profile: string
+  }// public struct Profile has key {
 //     id: UID,
 //     name: String,
 //     demos: vector<ID>,
@@ -23,10 +28,10 @@ export interface Profile {
 }
 
 export interface DisplayProfile {
-    id:{id:string};
-    name:string;
+    name:string; 
     demos:Demo[];
 }
+
 
 // public struct State has key {
 //     id: UID,

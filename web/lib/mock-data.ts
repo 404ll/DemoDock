@@ -1,96 +1,55 @@
-export const mockProjects = [
+import { getProfileByUser, getAllProfile, getDemoByProfile } from "@/contracts/query";
+import { Project,Profile } from "@/types/index";
+
+
+// 定义一个函数来异步加载数据
+export async function loadMockProjects(): Promise<Project[]> {
+  const profiles = await getAllProfile();
+  const allProjects: Project[] = [];
+  console.log("Profiles:", profiles);
+  // 对每个profile获取相关的demos
+  for (const profile of profiles) {
+    const demos = await getDemoByProfile(profile);
+    
+    // 将每个demo转换为Project格式
+    const profileProjects = demos.map(demo => ({
+      id: demo.id.id,
+      name: demo.name,
+      des: demo.des,
+      profile: profile.name // 使用profile的name作为profile字段
+    }));
+    console.log("Profile Projects:", profileProjects);
+    // 添加到总项目列表
+    allProjects.push(...profileProjects);
+  }
+
+  return allProjects;
+}
+
+export async function loadMockUserProjects(user:string ): Promise<Project[]> {
+  const profile = await getProfileByUser(user);
+  const demos = await getDemoByProfile(profile);
+  const allProjects: Project[] = [];
+  // 将每个demo转换为Project格式
+  const profileProjects = demos.map(demo => ({
+    id: demo.id.id,
+    name: demo.name,
+    des: demo.des,
+    profile: profile.name // 使用profile的name作为profile字段
+  }));
+  console.log("Profile Projects:", profileProjects);
+  // 添加到总项目列表
+  allProjects.push(...profileProjects);
+  
+  return allProjects;
+}
+
+// 提供一个同步版本用于初始渲染
+export const mockProjects: Project[] = [
   {
-    id: "project1",
-    title: "SuiSwap DEX Interface",
-    description:
-      "A decentralized exchange interface built on Sui blockchain with automated market maker functionality.",
-    author: {
-      name: "crypto_dev",
-      avatar: "/mystical-forest-spirit.png",
-    },
-    coverImage: "/dex-trading-dashboard.png",
-    tags: ["DeFi", "DEX", "Sui", "AMM"],
-    isPrivate: false,
-    likes: 124,
-    views: 1872,
-    createdAt: "2023-11-15T10:30:00Z",
-    githubUrl: "https://github.com/example/suiswap",
-  },
-  {
-    id: "project2",
-    title: "NFT Marketplace with Royalties",
-    description: "A complete NFT marketplace with royalty distribution system and on-chain verification.",
-    author: {
-      name: "nft_creator",
-      avatar: "/mystical-forest-spirit.png",
-    },
-    coverImage: "/blog-nft-marketplace.jpg",
-    tags: ["NFT", "Marketplace", "Royalties", "Digital Art"],
-    isPrivate: true,
-    likes: 89,
-    views: 1243,
-    createdAt: "2023-12-02T14:45:00Z",
-  },
-  {
-    id: "project3",
-    title: "Cross-Chain Bridge Implementation",
-    description: "A secure bridge for transferring assets between Sui and other major blockchains.",
-    author: {
-      name: "bridge_builder",
-      avatar: "/mystical-forest-spirit.png",
-    },
-    coverImage: "/interconnected-blockchains.png",
-    tags: ["Bridge", "Cross-chain", "Interoperability"],
-    isPrivate: false,
-    likes: 67,
-    views: 932,
-    createdAt: "2024-01-10T09:15:00Z",
-    githubUrl: "https://github.com/example/cross-chain-bridge",
-  },
-  {
-    id: "project4",
-    title: "Decentralized Identity Verification",
-    description: "A zero-knowledge proof system for identity verification without revealing personal data.",
-    author: {
-      name: "privacy_advocate",
-      avatar: "/mystical-forest-spirit.png",
-    },
-    coverImage: "/secure-identity-cloud.png",
-    tags: ["Identity", "ZK-Proofs", "Privacy", "DID"],
-    isPrivate: true,
-    likes: 103,
-    views: 1567,
-    createdAt: "2024-02-05T16:20:00Z",
-  },
-  {
-    id: "project5",
-    title: "DAO Governance Framework",
-    description: "A complete governance system for DAOs with proposal creation, voting, and execution.",
-    author: {
-      name: "dao_developer",
-      avatar: "/mystical-forest-spirit.png",
-    },
-    coverImage: "/dao-governance-dashboard.png",
-    tags: ["DAO", "Governance", "Voting", "Smart Contracts"],
-    isPrivate: false,
-    likes: 78,
-    views: 1089,
-    createdAt: "2024-01-25T11:40:00Z",
-    githubUrl: "https://github.com/example/dao-governance",
-  },
-  {
-    id: "project6",
-    title: "DeFi Lending Protocol",
-    description: "An overcollateralized lending protocol with dynamic interest rates based on utilization.",
-    author: {
-      name: "defi_architect",
-      avatar: "/mystical-forest-spirit.png",
-    },
-    coverImage: "/defi-lending-dashboard.png",
-    tags: ["DeFi", "Lending", "Interest Rates", "Collateral"],
-    isPrivate: false,
-    likes: 91,
-    views: 1345,
-    createdAt: "2023-12-18T13:25:00Z",
-  },
-]
+    id: "placeholder-1",
+    name: "Loading Projects...",
+    des: "Please wait while projects are being loaded",
+    profile: "System"
+  }
+];

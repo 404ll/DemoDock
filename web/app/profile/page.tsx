@@ -2,10 +2,8 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -16,35 +14,35 @@ import {
   Download,
   Eye,
   FileText,
-  Github,
-  Heart,
   Key,
   Lock,
-  Share,
   Shield,
   Unlock,
   Video,
 } from "lucide-react"
 import { useCurrentAccount } from '@mysten/dapp-kit'
-import { mockProjects } from "@/lib/mock-data"
+import { mockProjects, loadMockUserProjects } from "@/lib/mock-data"
 import { useRouter } from "next/navigation"
 import { getProfileByUser } from '@/contracts/query'
+import { Project } from "@/types/index";
+
 
 export default function ProjectPage() {
   const account = useCurrentAccount();
   const router = useRouter();
-  const [userProjects, setUserProjects] = useState<any[]>([]);
-  const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [userProjects, setUserProjects] = useState<Project[]>([]);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [hasAccess, setHasAccess] = useState(true);
   const [isRequesting, setIsRequesting] = useState(false);
   const [accessRequested, setAccessRequested] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [DemoAccount, setDemoAccount] = useState("");
+  
   const DemoAddress = async () => {
     try {
-      if (account) {  // 确保 account 存在
+      if (account) {
         const profile = await getProfileByUser(account.address);
-        if (profile) {  // 确保 profile 存在
+        if (profile) {
           setDemoAccount(String(profile.id.id));
         } 
       }
@@ -52,9 +50,10 @@ export default function ProjectPage() {
       console.error("获取用户资料失败:", error);
     }
   }
+  
   useEffect(() => {
     DemoAddress();
- }, [account]); // 添加依赖项，只在account变化时执行
+  }, [account]);
 
   // 获取用户项目
   useEffect(() => {
@@ -64,23 +63,36 @@ export default function ProjectPage() {
       return;
     }
 
-    // 模拟从区块链获取用户项目
-    // 实际应用中应该调用合约方法获取用户项目
-    const fetchUserProjects = () => {
+    const fetchUserProjects = async () => {
       setIsLoading(true);
-      // 模拟API调用延迟
-      setTimeout(() => {
-        // 假设用户拥有的项目是mockProjects中的前两个
-        const projects = mockProjects.slice(0, 2);
+      try {
+        // 使用loadMockUserProjects获取用户的项目
+        const projects = await loadMockUserProjects(account.address);
+        
+        // 设置获取到的项目
         setUserProjects(projects);
         
         if (projects.length > 0) {
           setSelectedProject(projects[0]);
-          setHasAccess(!projects[0].isPrivate);
+          // 默认已有访问权限
+          setHasAccess(true);
         }
         
+      } catch (error) {
+        console.error("获取项目失败:", error);
+        // 加载失败时使用默认数据
+        const fallbackProjects: Project[] = [{
+          id: "default-1",
+          name: "示例项目",
+          des: "这是一个默认示例项目，由于无法获取您的真实项目而创建",
+          profile: account.address.slice(0, 8)
+        }];
+        
+        setUserProjects(fallbackProjects);
+        setSelectedProject(fallbackProjects[0]);
+      } finally {
         setIsLoading(false);
-      }, 1000);
+      }
     };
 
     fetchUserProjects();
@@ -95,7 +107,7 @@ export default function ProjectPage() {
     }, 2000);
   };
 
-  // 如果正在加载或没有选中的项目，显示加载状态
+  // 加载中状态
   if (isLoading || !selectedProject) {
     return (
       <div className="container py-8 flex items-center justify-center min-h-[60vh]">
@@ -107,7 +119,7 @@ export default function ProjectPage() {
     );
   }
 
-  // 如果没有项目，显示创建项目提示
+  // 无项目状态
   if (userProjects.length === 0) {
     return (
       <div className="container py-8 flex items-center justify-center min-h-[60vh]">
@@ -115,12 +127,16 @@ export default function ProjectPage() {
           <h2 className="text-2xl font-bold mb-4">您还没有创建任何项目</h2>
           <p className="text-muted-foreground mb-6">开始创建您的第一个项目，展示您的创意</p>
           <Button asChild>
-            <Link href="/create">创建新项目</Link>
+            <Link href="/upload">创建新项目</Link>
           </Button>
         </div>
       </div>
     );
   }
+
+  // 创建一个随机日期作为创建日期（因为新的Project结构没有createdAt）
+  const createdDate = new Date();
+  createdDate.setDate(createdDate.getDate() - Math.floor(Math.random() * 30));
 
   return (
     <div className="container py-8">
@@ -135,63 +151,43 @@ export default function ProjectPage() {
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div>
-              <h1 className="text-3xl font-bold">{selectedProject.title}</h1>
+              <h1 className="text-3xl font-bold">{selectedProject.name}</h1>
               <div className="mt-2 flex items-center gap-3">
                 <div className="flex items-center gap-2">
                   <Avatar className="h-6 w-6">
-                    <AvatarImage src={selectedProject.author.avatar || "/placeholder.svg"} alt={selectedProject.author.name} />
-                    <AvatarFallback>{selectedProject.author.name.charAt(0)}</AvatarFallback>
+                    <AvatarImage src="/placeholder.svg" alt={selectedProject.profile} />
+                    <AvatarFallback>{selectedProject.profile.charAt(0)}</AvatarFallback>
                   </Avatar>
-                  <span className="text-sm">{selectedProject.author.name}</span>
+                  <span className="text-sm">{selectedProject.profile}</span>
                 </div>
                 <div className="flex items-center gap-1 text-sm text-muted-foreground">
                   <Clock className="h-4 w-4" />
-                  <span>{new Date(selectedProject.createdAt).toLocaleDateString()}</span>
+                  <span>{createdDate.toLocaleDateString()}</span>
                 </div>
               </div>
             </div>
 
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" className="gap-2">
-                <Heart className="h-4 w-4" />
-                点赞
-                <span className="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-xs">{selectedProject.likes}</span>
+                查看详情
               </Button>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Share className="h-4 w-4" />
-                分享
-              </Button>
-              {selectedProject.githubUrl && (
-                <Button variant="outline" size="sm" className="gap-2" asChild>
-                  <a href={selectedProject.githubUrl} target="_blank" rel="noopener noreferrer">
-                    <Github className="h-4 w-4" />
-                    GitHub
-                  </a>
-                </Button>
-              )}
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {selectedProject.tags.map((tag: string) => (
-              <Badge key={tag} variant="secondary">
-                {tag}
-              </Badge>
-            ))}
-          </div>
+          {/* 移除tags展示，新结构中没有tags */}
 
-          <div className="relative aspect-video w-full overflow-hidden rounded-lg border">
-            <Image src={selectedProject.coverImage || "/placeholder.svg"} alt={selectedProject.title} fill className="object-cover" />
-          </div>
+          {/* 使用占位图片 */}
+          {/* <div className="relative aspect-video w-full overflow-hidden rounded-lg border bg-slate-100 flex items-center justify-center">
+            <div className="text-muted-foreground">项目预览图</div>
+          </div> */}
 
           <div className="grid gap-6 md:grid-cols-[2fr_1fr]">
             <div className="space-y-6">
               <Card>
                 <CardContent className="p-6">
                   <h2 className="mb-4 text-xl font-semibold">关于此项目</h2>
-                  <p className="text-muted-foreground">{selectedProject.description}</p>
+                  <p className="text-muted-foreground">{selectedProject.des}</p>
                   <p className="mt-4 text-muted-foreground">
-                    这是您创建的项目详情页面。您可以在这里查看和管理项目内容，包括文件、演示和演示文稿。
                   </p>
                 </CardContent>
               </Card>
@@ -203,7 +199,6 @@ export default function ProjectPage() {
                       <TabsList className="mb-4">
                         <TabsTrigger value="files">文件</TabsTrigger>
                         <TabsTrigger value="demo">演示</TabsTrigger>
-                        <TabsTrigger value="presentation">演示文稿</TabsTrigger>
                       </TabsList>
                       <TabsContent value="files" className="space-y-4">
                         <div className="flex items-center justify-between rounded-lg border p-3">
@@ -219,30 +214,11 @@ export default function ProjectPage() {
                             下载
                           </Button>
                         </div>
-                        <div className="flex items-center justify-between rounded-lg border p-3">
-                          <div className="flex items-center gap-3">
-                            <FileText className="h-5 w-5 text-muted-foreground" />
-                            <div>
-                              <p className="font-medium">文档</p>
-                              <p className="text-xs text-muted-foreground">PDF - 1.2 MB</p>
-                            </div>
-                          </div>
-                          <Button size="sm" variant="ghost" className="gap-2">
-                            <Download className="h-4 w-4" />
-                            下载
-                          </Button>
-                        </div>
                       </TabsContent>
                       <TabsContent value="demo">
                         <div className="aspect-video w-full overflow-hidden rounded-lg border bg-muted flex items-center justify-center">
                           <Video className="h-12 w-12 text-muted-foreground" />
                           <p className="ml-2 text-muted-foreground">演示视频将在此处播放</p>
-                        </div>
-                      </TabsContent>
-                      <TabsContent value="presentation">
-                        <div className="aspect-[4/3] w-full overflow-hidden rounded-lg border bg-muted flex items-center justify-center">
-                          <FileText className="h-12 w-12 text-muted-foreground" />
-                          <p className="ml-2 text-muted-foreground">演示文稿将在此处显示</p>
                         </div>
                       </TabsContent>
                     </Tabs>
@@ -293,16 +269,14 @@ export default function ProjectPage() {
                         <Shield className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm">访问类型</span>
                       </div>
-                      <Badge variant={selectedProject.isPrivate ? "outline" : "secondary"}>
-                        {selectedProject.isPrivate ? "私有" : "公开"}
-                      </Badge>
+                      <span className="text-sm">加密访问</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Eye className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm">浏览量</span>
                       </div>
-                      <span className="text-sm">{selectedProject.views}</span>
+                      <span className="text-sm">--</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -327,17 +301,12 @@ export default function ProjectPage() {
                           href={`/project?id=${project.id}`}
                           className="flex gap-3 rounded-lg hover:bg-muted p-2 transition-colors"
                         >
-                          <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-md">
-                            <Image
-                              src={project.coverImage || "/placeholder.svg"}
-                              alt={project.title}
-                              fill
-                              className="object-cover"
-                            />
+                          <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md bg-slate-100 flex items-center justify-center">
+                            <FileText className="h-6 w-6 text-muted-foreground" />
                           </div>
                           <div>
-                            <h4 className="font-medium line-clamp-1">{project.title}</h4>
-                            <p className="text-xs text-muted-foreground line-clamp-2">{project.description}</p>
+                            <h4 className="font-medium line-clamp-1">{project.name}</h4>
+                            <p className="text-xs text-muted-foreground line-clamp-2">{project.des}</p>
                           </div>
                         </Link>
                       ))}
@@ -346,7 +315,7 @@ export default function ProjectPage() {
                       <div className="text-center p-4">
                         <p className="text-muted-foreground mb-2">您目前只有一个项目</p>
                         <Button asChild size="sm" variant="outline">
-                          <Link href="/create">创建新项目</Link>
+                          <Link href="/upload">创建新项目</Link>
                         </Button>
                       </div>
                     )}

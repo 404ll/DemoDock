@@ -225,6 +225,15 @@ export const getCapByDemoId = async (address: string,id: string) => {
 
 };
 
+export const getDemoByProfile = async (profile: Profile) => {
+  const demoPromises = profile.demos.map(async (oneDemo) => {
+    const demo = await getdemoByid(oneDemo);
+    return demo;
+  });
+  const demos = await Promise.all(demoPromises);
+  return demos;
+
+}
 
 //public fun create_profile(name: String, state: &mut State, ctx: &mut TxContext) {
 //   let profile = Profile {
