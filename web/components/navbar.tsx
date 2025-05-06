@@ -16,30 +16,53 @@ export function Navbar() {
   const account = useCurrentAccount();
   const [DemoAccount, setDemoAccount] = useState("");
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  
   const DemoAddress = async () => {
     // 重置状态，确保切换账户时UI正确更新
     setDemoAccount("");
     setIsSuperAdmin(false);
+    
     try {
-      if (account) {  // 确保 account 存在
-        const profile = await getProfileByUser(account.address);
-        const isSuperAdmin = await getSuperAdmin(account.address);
-        if (isSuperAdmin) {
-          setIsSuperAdmin(true);
-          console.log("用户是超级管理员");
-        }else{  
-          setIsSuperAdmin(false);
-          console.log("用户不是超级管理员");
-        }
-        if (profile) {  // 确保 profile 存在
-          setDemoAccount(String(profile.id.id));
-          console.log("用户的个人资料:", profile.id.id);
-          console.log("用户的个人:", String(profile.id.id));
-        } 
+      if (!account || !account.address) {
+        console.log("账户未连接或地址不可用");
+        return;
       }
+      
+      // 添加地址格式验证
+      if (!account.address.startsWith("0x") || account.address.length < 42) {
+        console.log(`无效的地址格式: ${account.address}`);
+        return;
+      }
+      
+        try {
+          // 先检查超级管理员权限
+          const superAdminID = await getSuperAdmin(account.address);
+          if (superAdminID) {
+            setIsSuperAdmin(true);
+            console.log("用户是超级管理员");
+          } else {  
+            setIsSuperAdmin(false);
+            console.log("用户不是超级管理员");
+          }
+          
+          // 然后获取用户资料
+          try {
+            const profile = await getProfileByUser(account.address);
+            if (profile) {
+              setDemoAccount(String(profile.id.id));
+              console.log("用户的个人资料:", profile.id.id);
+            }
+          } catch (profileError) {
+            // 单独处理资料获取错误，不影响管理员状态
+            console.log("获取用户资料失败，可能尚未创建:", profileError);
+          }
+        } catch (err) {
+          console.error("检查用户状态失败:", err);
+        }
      
+      
     } catch (error) {
-      console.error("获取用户资料失败:", error);
+      console.error("获取用户信息过程中出错:", error);
     }
   }
 

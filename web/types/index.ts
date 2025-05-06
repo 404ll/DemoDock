@@ -83,3 +83,7 @@ export interface DemoRequest {
     demo_id:string;
     visitor:string;
 }
+
+const SuperAdminCap = {
+    id: {id:string};
+  } 

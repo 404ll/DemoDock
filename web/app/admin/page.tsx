@@ -8,7 +8,7 @@ import { SubAdminList } from "@/components/admin/sub-admin-list"
 import { Shield, Users, PlusCircle } from "lucide-react" // Added PlusCircle
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useCurrentAccount } from '@mysten/dapp-kit'
-import { getSuperAdmin,getAdminAddresses } from '@/contracts/query'
+import { getSuperAdmin,getAdminList,addAdmin, removeAdmin } from '@/contracts/query'
 import { Button } from "@/components/ui/button" // Added Button
 import {
   Dialog,
@@ -21,26 +21,20 @@ import {
 } from "@/components/ui/dialog" // Added Dialog components
 import { Input } from "@/components/ui/input" // Added Input
 import { Label } from "@/components/ui/label" // Added Label
-import { addAdmin, removeAdmin } from "@/contracts/query"
 import { useBetterSignAndExecuteTransaction } from "@/hooks/useBetterTx"
 
-// 假设的 SubAdmin 类型，请根据您的实际定义调整
-interface Admin {
-  id: string;
- admin:string[]
-}
 
 export default function AdminPage() {
   const router = useRouter()
   const account = useCurrentAccount();
-  const [admins, setAdmins] = useState<Admin[]>([])
+  const [admins, setAdmins] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const isAdmin = getSuperAdmin(account?.address!); 
   const [isSubmittingAdd, setIsSubmittingAdd] = useState(false)
-
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [newAdminAddress, setNewAdminAddress] = useState("")
+  
   const { handleSignAndExecuteTransaction: add } = useBetterSignAndExecuteTransaction({
     tx: addAdmin,
   })
@@ -48,77 +42,93 @@ export default function AdminPage() {
     tx: removeAdmin,
   })
 
+  // Move fetchSubAdmins outside the useEffect so it can be called anywhere in the component
+  const fetchSubAdmins = async () => {
+    setLoading(true)
+    try {
+      const data = await getAdminList();
+
+      setAdmins(data);
+    } catch (err) {
+      console.error("Error fetching sub-admins:", err);
+      setError("Failed to load sub-admins");
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
     // 如果用户未连接钱包或不是管理员，重定向到首页
     if (!account) {
       router.push("/")
       return
     }
-
     if (!isAdmin) {
       router.push("/explore")
       return
     }
-
-    // 获取子管理员列表
-    async function fetchSubAdmins() {
-      setLoading(true)
-      setError(null)
-
-      try {
-        const data = await getSubAdmins()
-        setAdmins(data)
-      } catch (err) {
-        console.error("Error fetching sub-admins:", err)
-        setError("Failed to load sub-admins. Please try again later.")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchSubAdmins()
-  }, [account, isAdmin, router])
+    
+    // Fetch the list of sub-admins when the component loads
+    fetchSubAdmins();
+    console.log("Admin list fetched:", admins);
+  }, [account])
 
   // 处理添加子管理员
-  const handleAddSubAdmin = async (address:string) => {
-     
-    // Basic address validation (example)
+  const handleAddSubAdmin = async () => {
     if (!newAdminAddress.startsWith("0x") || newAdminAddress.length < 10) {
-    
       window.alert("Validation Error: Please enter a valid address.");
       return;
     }
 
-
     try {
-      // 在实际应用中，这里会调用 API 添加子管理员
-      add({account:address}).onSuccess(() => {
-        // 刷新子管理员列表
-        window.alert(`successfully.`);
-
-      }).onError(() => {
-        // 处理错误
-        window.alert("Failed to add sub-admin. Please try again.");
-      })
- 
+      const superAdminID = await getSuperAdmin(account?.address!);
+      if (!superAdminID) {
+        window.alert("You are not authorized to add sub-admins.");
+        return;
+      }
+      add({superAdminCap:superAdminID,account:newAdminAddress}).onSuccess(() => {
+        console.log("Sub-admin added successfully");
+        fetchSubAdmins(); // Refresh the list after adding
+      }).execute();
     } catch (err) {
       console.error("Error adding sub-admin:", err);
       window.alert("Failed to add sub-admin. Please try again.");
     } 
   };
 
-
   // 处理删除子管理员
-  const handleDeleteSubAdmin = (address: string) => {
-    remove({account:address}).onSuccess(() => {
-      // 刷新子管理员列表
-      window.alert(`successfully.`);
-
-    }).onError(() => {
-      // 处理错误
-      window.alert("Failed to add sub-admin. Please try again.");
-    })
-  }
+  const handleDeleteSubAdmin = async (addressToDelete: string) => {
+    console.log("Deleting sub-admin:", addressToDelete);
+    
+    // 验证传入的地址而非输入框中的地址
+    if (!addressToDelete || !addressToDelete.startsWith("0x") || addressToDelete.length < 10) {
+      window.alert("Validation Error: Invalid address format.");
+      return;
+    }
+    
+    try {
+      const superAdminID = await getSuperAdmin(account?.address!);
+      console.log("SuperAdmin ID:", superAdminID);
+      
+      if (!superAdminID) {
+        window.alert("You are not authorized to remove sub-admins.");
+        return;
+      }
+      
+      remove({
+        superAdminCap: superAdminID, 
+        account: addressToDelete
+      })
+      .onSuccess(() => {
+        console.log("Sub-admin removed successfully");
+        fetchSubAdmins(); // 刷新列表
+      })
+      .execute();
+    } catch (err) {
+      console.error("Error removing sub-admin:", err);
+      window.alert("Failed to remove sub-admin. Please try again.");
+    }
+  };
 
   if (loading) {
     return (
@@ -194,7 +204,6 @@ export default function AdminPage() {
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
-                   
                     <div className="grid grid-cols-4 items-center gap-4">
                       <Label htmlFor="new-admin-address" className="text-right">
                         Address
@@ -207,11 +216,6 @@ export default function AdminPage() {
                         placeholder="e.g., 0x123abc..."
                       />
                     </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                      
-                      
-                    </div>
-                    {/* Future: Add permission selection here */}
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>

@@ -9,7 +9,7 @@ import { normalizeSuiAddress } from '@mysten/sui/utils';
 import { bcs } from '@mysten/sui/bcs';
 import { Demo, DemoPool, Profile, ProfileCreated, State } from "@/types";
 
-export   const SUI_VIEW_OBJECT_URL = `https://suiscan.xyz/testnet/object`;
+export const SUI_VIEW_OBJECT_URL = `https://suiscan.xyz/testnet/object`;
 
 export const getEncryptedObject=async(id:string,arrayBuffer:ArrayBuffer)=>{
   const packageId =networkConfig.testnet.variables.Package;
@@ -260,18 +260,24 @@ export const getDemoByProfile = async (profile: Profile) => {
 // }
 
 export const createProfile = createBetterTxFactory<{ name: string;}>((tx, networkVariables, { name }) => {
-  tx.moveCall({
+  const adminlist = tx.moveCall({
     package: networkVariables.Package,
     module: "profile",
     function: "create_profile",
     arguments: [tx.pure.string(name), tx.object(networkVariables.State)]
 });
+  console.log("adminlist",adminlist);
   return tx;
 });
 
 //返回是否是超级管理员
 export const getSuperAdmin = async (address:string) => {
-  const res = await suiClient.getOwnedObjects({
+
+  interface SuperAdminCap  {
+    id: {id:string};
+  } 
+  
+  const superadmin = await suiClient.getOwnedObjects({
     owner: address,
     options: {
       showContent: true,
@@ -281,15 +287,69 @@ export const getSuperAdmin = async (address:string) => {
       StructType: `${networkConfig.testnet.variables.Package}::admin::SuperAdminCap`,
     },
   });
-  // 处理没有找到 SuperAdmin 的情况
-  if (!res.data || res.data.length === 0) {
-    return false; 
-  }else{  
-    return true
+
+  // 处理没有找到 Profile 的情况
+  if (!superadmin.data || superadmin.data.length === 0) {
+    return null; 
   }
+
+  // 直接获取第一个对象（因为确定只有一个）
+  const adminObj = superadmin.data[0];
+  
+  // 确保有内容
+  if (!adminObj.data?.content || !("fields" in adminObj.data.content)) {
+    throw new Error("Invalid profile data structure");
+  }
+
+  // 提取并返回 Profile 数据
+  const suiperAdmin = adminObj.data.content;
+  const suiperAdminCap = suiperAdmin.fields as unknown as SuperAdminCap;
+  console.log("superadmin",suiperAdminCap.id.id);
+  return suiperAdminCap.id.id
+
 }
 
 ///Admin Functions
+export const getAdminList = async (): Promise<string[]> => {
+  try {
+    // 获取 AdminList 对象
+    const adminListObj = await suiClient.getObject({
+      id: networkConfig.testnet.variables.AdminList,
+      options: {
+        showContent: true,
+      },
+    });
+
+    // 检查返回的数据是否包含 content 和 fields
+    if (!adminListObj.data?.content || !("fields" in adminListObj.data.content)) {
+      throw new Error("Invalid AdminList structure");
+    }
+
+    const adminListParseData = adminListObj.data?.content as SuiParsedData;
+
+    // 解析 adminList
+    if ('fields' in adminListParseData) {
+      const adminList = adminListParseData.fields as unknown as { admin: { type: string, fields: { [key: string]: string[] } }, id: { id: string } };
+
+      if (adminList && adminList.admin) {
+        // 获取管理员地址列表
+        const adminAddresses = adminList.admin.fields?.contents as string[]; 
+        console.log("adminAddresses",adminAddresses);
+        return adminAddresses;
+      } else {
+        throw new Error("Invalid AdminList structure");
+      }
+    } else {
+      throw new Error("Invalid AdminList structure");
+    }
+
+  } catch (error) {
+    console.error("Error fetching admin list:", error);
+    throw error;
+  }
+};
+
+
 
 // public fun add_admin(
 //   _super_admin: &SuperAdminCap,
@@ -299,12 +359,12 @@ export const getSuperAdmin = async (address:string) => {
 //   admin_list.admin.insert(account);
 // }
 
-export const addAdmin = createBetterTxFactory<{account: string;}>((tx, networkVariables, { account }) => {
+export const addAdmin = createBetterTxFactory<{superAdminCap:string,account: string;}>((tx, networkVariables, { superAdminCap,account }) => {
   tx.moveCall({
     package: networkVariables.Package,
     module: "admin",
     function: "add_admin",
-    arguments: [tx.object(networkVariables.AdminList), tx.pure.address(account)]
+    arguments: [tx.object(superAdminCap),tx.object(networkVariables.AdminList), tx.pure.address(account)]
 });
   return tx;
 });
@@ -317,12 +377,12 @@ export const addAdmin = createBetterTxFactory<{account: string;}>((tx, networkVa
 //   admin_list.admin.remove(&account);
 // }
 
-export const removeAdmin = createBetterTxFactory<{account: string;}>((tx, networkVariables, { account }) => {
+export const removeAdmin = createBetterTxFactory<{superAdminCap:string,account: string;}>((tx, networkVariables, {superAdminCap, account }) => {
   tx.moveCall({
     package: networkVariables.Package,
     module: "admin",
     function: "remove_admin",
-    arguments: [tx.object(networkVariables.AdminList), tx.pure.address(account)]
+    arguments: [tx.object(superAdminCap),tx.object(networkVariables.AdminList), tx.pure.address(account)]
 });
   return tx;
 });
@@ -443,13 +503,5 @@ export const approveInternal = createBetterTxFactory<{ caller: string; demo: str
 //   vec_set::into_keys(admin_list.admin)
 // }
 
-export const getAdminAddresses = createBetterTxFactory<{}>((tx, networkVariables) => {
-  tx.moveCall({
-    package: networkVariables.Package,
-    module: "admin",
-    function: "get_admin_addresses",
-    arguments: [tx.object(networkVariables.AdminList)]
-});
-  return tx;
-});
+
 
