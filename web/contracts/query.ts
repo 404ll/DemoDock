@@ -24,6 +24,7 @@ export const getEncryptedObject=async(id:string,arrayBuffer:ArrayBuffer)=>{
     id,
     data: new Uint8Array(arrayBuffer),
   });
+  console.log("Encrypted Object:", encryptedObject);
 
   return encryptedObject;
 }

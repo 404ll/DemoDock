@@ -11,7 +11,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Plus, X, Check, Github } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import EncryptedUploader from "@/components/upload/EncryptedUploader"
 
 export default function CreatePage() {
   const router = useRouter()
