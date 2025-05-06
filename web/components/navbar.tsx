@@ -15,12 +15,13 @@ export function Navbar() {
   const router = useRouter()
   const account = useCurrentAccount();
   const [DemoAccount, setDemoAccount] = useState("");
+
   const DemoAddress = async () => {
-    console.log("DemoAddress12121");
+    // 重置状态，确保切换账户时UI正确更新
+    setDemoAccount("");
     try {
       if (account) {  // 确保 account 存在
         const profile = await getProfileByUser(account.address);
-        
         if (profile) {  // 确保 profile 存在
           setDemoAccount(String(profile.id.id));
           console.log("用户的个人资料:", profile.id.id);
@@ -35,7 +36,7 @@ export function Navbar() {
 
   useEffect(() => {
     DemoAddress();
-      console.log(DemoAccount, "DemoAcc111ount");
+      
  }, [account]); // 添加依赖项，只在account变化时执行
 
   return (
@@ -57,7 +58,7 @@ export function Navbar() {
                 pathname === "/explore" ? "text-primary" : "text-muted-foreground",
               )}
             >
-              Home
+
             </Link>
           </nav>
         )}
@@ -68,10 +69,9 @@ export function Navbar() {
               <Button variant="outline" size="sm" asChild>
                 <Link href="/create">Create</Link>
               </Button>
-              <Button variant="ghost" size="icon" asChild>
+              <Button variant="outline" size="sm" asChild>
                 <Link href="/profile">
-                  <User className="h-5 w-5" />
-                  <span className="sr-only">Profile</span>
+                 Profile
                 </Link>
               </Button>
               <ConnectButton />
