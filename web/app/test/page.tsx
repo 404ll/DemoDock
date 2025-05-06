@@ -10,6 +10,7 @@ import {
   getAllProfile,
   getUserDemo,
   publishDemo,
+  getCapByDemoId
 } from "@/contracts/query"; 
 import { useBetterSignAndExecuteTransaction } from '@/hooks/useBetterTx';
 import { ConnectButton, useCurrentAccount} from "@mysten/dapp-kit";
@@ -74,9 +75,11 @@ export default function TestSuiPage() {
       console.error("No profile found");
       return;
     }
+    const cap = await getCapByDemoId(account?.address ?? "0x0","0xb6082813aab7ec2f5ed2f79018e9fadd51967f051142571fd7291b0455545526");
     publishWalrusHandler({
-      demo: "0xc23b09d34cfbd2e7d74c806cf8193b43d5f2f9e7d93fb13ed4f81ef21af3a135",
-      blob_id: "",
+      demo: "0xb6082813aab7ec2f5ed2f79018e9fadd51967f051142571fd7291b0455545526",
+      cap: cap,
+      blob_id: "1245785135478",
     }).onSuccess(async (result) => {
         console.log("Demo added to profile successfully:", result);
         }
@@ -84,9 +87,11 @@ export default function TestSuiPage() {
   };
 
   const handleAddVisitor = async () => {
+    const cap = await getCapByDemoId(account?.address ?? "0x0","0xb6082813aab7ec2f5ed2f79018e9fadd51967f051142571fd7291b0455545526");
     addVisitorByUserHandler({
-      demo: "0xc23b09d34cfbd2e7d74c806cf8193b43d5f2f9e7d93fb13ed4f81ef21af3a135",
-      account: "0xb6dd02102d98a3eb89ba913af8ae6a772aee334007ec8d07e6151bdcc5fdff6b",
+      demo: "0xb6082813aab7ec2f5ed2f79018e9fadd51967f051142571fd7291b0455545526",
+      cap: cap,
+      account:"0x9222bc4b61099ced2ab5719c6528567ff75dafbfa3cddf9e2078e5c733dd3294"
     }).onSuccess(async (result) => {
         console.log("Visitor added successfully:", result);
       }
@@ -94,9 +99,11 @@ export default function TestSuiPage() {
   };
 
   const handleRemoveVisitor = async () => {
+    const cap = await getCapByDemoId(account?.address ?? "0x0","0xb6082813aab7ec2f5ed2f79018e9fadd51967f051142571fd7291b0455545526");
     removeVisitorByUserHandler({
-      demo: "0xc23b09d34cfbd2e7d74c806cf8193b43d5f2f9e7d93fb13ed4f81ef21af3a135",
-      account: "0xb6dd02102d98a3eb89ba913af8ae6a772aee334007ec8d07e6151bdcc5fdff6b",
+      demo: "0xb6082813aab7ec2f5ed2f79018e9fadd51967f051142571fd7291b0455545526",
+      cap: cap,
+      account:"0x9222bc4b61099ced2ab5719c6528567ff75dafbfa3cddf9e2078e5c733dd3294"
     }).onSuccess(async (result) => {
         console.log("Visitor removed successfully:", result);
       }
@@ -168,14 +175,14 @@ useEffect(() => {
         </button>
         //上传到walrus的时候使用
         <button onClick={publishHandler} className="btn">
-          ➕ Add Demo to Profile
+        已经通过✅ ➕ Add Demo to Profile
         </button> 
 
         <button onClick={handleAddVisitor} className="btn">
-          👀 Add Visitor to Demo
+        已经通过✅ 👀 Add Visitor to Demo
         </button>
         <button onClick={handleRemoveVisitor} className="btn">
-          ❌ Remove Visitor from Demo
+        已经通过✅ ❌ Remove Visitor from Demo
         </button>
         <button onClick={handleQueryAllDemos} className="btn">
         已经通过✅  Query All Demos

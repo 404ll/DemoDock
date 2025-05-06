@@ -114,32 +114,16 @@ export const getAllProfile = async () => {
 
 
 //获取当前用户的所有Demo
-export const getUserDemo = async (address: string): Promise<Demo[]> => {
+export const getUserDemo = async (address: string) => {
   if (!isValidSuiAddress(address)) {
     throw new Error("Invalid Sui address");
   }
-
-  const demosContent = await suiClient.getOwnedObjects({
-    owner: address,
-    filter: {
-      StructType: `${networkConfig.testnet.variables.Package}::demo::Demo`,
-    },
-    options: {
-      showContent: true,
-    },
+  const profile = await getProfileByUser(address);
+  const demoPromises = profile.demos.map(async (oneDemo) => {
+    const demo = await getdemoByid(oneDemo);
+    return demo;
   });
-
-  const demos: Demo[] = demosContent.data
-    .map((demo) => {
-      const parsedDemoData = demo.data?.content;
-      if (!parsedDemoData || !("fields" in parsedDemoData)) {
-        return null;
-      }
-      const demoData = parsedDemoData.fields as SuiParsedData;
-      return demoData as unknown as Demo;
-    })
-    .filter((item): item is Demo => item !== null);
-    console.log("test querydemo",demosContent.data);
+  const demos = await Promise.all(demoPromises);
   return demos;
 };
 
@@ -171,6 +155,8 @@ export const getProfile = async (address: string) => {
   }
   return profile;
 };
+
+
 //通过用户地址获得Profile
 export const getProfileByUser = async (address: string) => {
   if (!isValidSuiAddress(address)) {
@@ -208,6 +194,34 @@ export const getProfileByUser = async (address: string) => {
 }
 
 
+//通过demo获取capId
+export const getCapByDemoId = async (address: string,id: string) => {
+      const res = await suiClient.getOwnedObjects({
+        owner: address,
+        options: {
+          showContent: true,
+          showType: true,
+        },
+        filter: {
+          StructType: `${networkConfig.testnet.variables.Package}::demo::Cap`,
+        },
+      });
+      
+      console.log("CapId",res.data);
+      const capId = res.data
+      .map((obj) => {
+        const fields = (obj!.data!.content as { fields: any }).fields;
+        return {
+          id: fields?.id.id,
+          demo_id: fields?.demo_id,
+        };
+      })
+      .filter((item) => item.demo_id === id)
+      .map((item) => item.id) as string[];
+      console.log("CapId",capId);
+      return capId[0];
+
+};
 
 
 //public fun create_profile(name: String, state: &mut State, ctx: &mut TxContext) {
@@ -301,14 +315,17 @@ export const createDemo = createBetterTxFactory<{ name: string; des: string,prof
   return tx;
 });
 
+// public fun publish(demo: &mut Demo, cap: &Cap, blob_id: String) {
+//   assert!(cap.demo_id == object::id(demo), EInvalidCap);
+//   df::add(&mut demo.id, blob_id, MARKER);
+// }
 
-
-export const publishDemo = createBetterTxFactory<{ demo: string;  blob_id: string;}>((tx, networkVariables, { demo, blob_id }) => {
+export const publishDemo = createBetterTxFactory<{ demo: string; cap: string; blob_id: string;}>((tx, networkVariables, { demo, cap, blob_id }) => {
   tx.moveCall({
     package: networkVariables.Package,
     module: "demo",
     function: "publish",
-    arguments: [tx.object(demo),  tx.pure.string(blob_id)]
+    arguments: [tx.object(demo), tx.object(cap), tx.pure.string(blob_id)]
 });
   return tx;
 });
@@ -318,12 +335,12 @@ export const publishDemo = createBetterTxFactory<{ demo: string;  blob_id: strin
 //   assert!(!demo.visitor_list.contains(&account), EDuplicate);
 //   demo.visitor_list.push_back(account);
 // }
-export const addVisitorByUser = createBetterTxFactory<{ demo: string; account: string;}>((tx, networkVariables, { demo, account }) => {
+export const addVisitorByUser = createBetterTxFactory<{ demo: string; cap: string;account:string;}>((tx, networkVariables, { demo, cap,account }) => {
   tx.moveCall({
     package: networkVariables.Package,
     module: "demo",
     function: "add_visitor_by_user",
-    arguments: [tx.object(demo), tx.pure.address(account)]
+    arguments: [tx.object(demo), tx.object(cap), tx.pure.address(account)]
 });
   return tx;
 });
@@ -332,12 +349,12 @@ export const addVisitorByUser = createBetterTxFactory<{ demo: string; account: s
 //   assert!(cap.demo_id == object::id(demo), EInvalidCap);
 //   demo.visitor_list = demo.visitor_list.filter!(|x| x != account);
 // }
-export const removeVisitorByUser = createBetterTxFactory<{ demo: string;  account: string;}>((tx, networkVariables, { demo,  account }) => {
+export const removeVisitorByUser = createBetterTxFactory<{ demo: string; cap: string; account: string; }>((tx, networkVariables, { demo, cap, account }) => {
   tx.moveCall({
     package: networkVariables.Package,
     module: "demo",
     function: "remove_visitor_by_user",
-    arguments: [tx.object(demo), tx.pure.address(account)]
+    arguments: [tx.object(demo), tx.object(cap), tx.pure.address(account)]
 });
   return tx;
 });

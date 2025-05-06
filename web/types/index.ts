@@ -22,6 +22,12 @@ export interface Profile {
     demos:string[];
 }
 
+export interface DisplayProfile {
+    id:{id:string};
+    name:string;
+    demos:Demo[];
+}
+
 // public struct State has key {
 //     id: UID,
 //     profiles: Table<address, ID>,
