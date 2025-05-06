@@ -268,6 +268,26 @@ export const createProfile = createBetterTxFactory<{ name: string;}>((tx, networ
   return tx;
 });
 
+//返回是否是超级管理员
+export const getSuperAdmin = async (address:string) => {
+  const res = await suiClient.getOwnedObjects({
+    owner: address,
+    options: {
+      showContent: true,
+      showType: true,
+    },
+    filter: {
+      StructType: `${networkConfig.testnet.variables.Package}::admin::SuperAdminCap`,
+    },
+  });
+  // 处理没有找到 SuperAdmin 的情况
+  if (!res.data || res.data.length === 0) {
+    return false; 
+  }else{  
+    return true
+  }
+
+}
 
 ///Admin Functions
 

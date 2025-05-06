@@ -8,20 +8,29 @@ import { Ship, User } from "lucide-react"
 import { cn } from "@/utils"
 import { useCurrentAccount } from '@mysten/dapp-kit'
 import { ConnectButton } from '@mysten/dapp-kit'
-import { getProfileByUser } from '@/contracts/query'
+import { getProfileByUser,getSuperAdmin } from '@/contracts/query'
 
 export function Navbar() {
   const pathname = usePathname()
   const router = useRouter()
   const account = useCurrentAccount();
   const [DemoAccount, setDemoAccount] = useState("");
-
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const DemoAddress = async () => {
     // 重置状态，确保切换账户时UI正确更新
     setDemoAccount("");
+    setIsSuperAdmin(false);
     try {
       if (account) {  // 确保 account 存在
         const profile = await getProfileByUser(account.address);
+        const isSuperAdmin = await getSuperAdmin(account.address);
+        if (isSuperAdmin) {
+          setIsSuperAdmin(true);
+          console.log("用户是超级管理员");
+        }else{  
+          setIsSuperAdmin(false);
+          console.log("用户不是超级管理员");
+        }
         if (profile) {  // 确保 profile 存在
           setDemoAccount(String(profile.id.id));
           console.log("用户的个人资料:", profile.id.id);
@@ -36,7 +45,6 @@ export function Navbar() {
 
   useEffect(() => {
     DemoAddress();
-      
  }, [account]); // 添加依赖项，只在account变化时执行
 
   return (
@@ -58,7 +66,6 @@ export function Navbar() {
                 pathname === "/explore" ? "text-primary" : "text-muted-foreground",
               )}
             >
-
             </Link>
           </nav>
         )}
@@ -70,10 +77,14 @@ export function Navbar() {
                 <Link href="/create">Create</Link>
               </Button>
               <Button variant="outline" size="sm" asChild>
-                <Link href="/profile">
-                 Profile
-                </Link>
+                <Link href="/profile">Profile</Link>
               </Button>
+              {/* 只有超级管理员可以看到Admin按钮 */}
+              {isSuperAdmin && (
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/admin">Admin</Link>
+                </Button>
+              )}
               <ConnectButton />
             </>
           ) : (
