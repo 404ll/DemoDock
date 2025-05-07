@@ -84,6 +84,6 @@ export interface DemoRequest {
     visitor:string;
 }
 
-const SuperAdminCap = {
-    id: {id:string};
-  } 
+export interface SuperAdminCap { 
+    id: {id: string};      
+}
