@@ -144,6 +144,10 @@ public fun approve_internal(
     }
 }
 
+entry fun seal_approve(id: vector<u8>, allowlist: &Allowlist, ctx: &TxContext) {
+    assert!(approve_internal(ctx.sender(), id, allowlist), ENoAccess);
+}
+
 public fun publish(demo: &mut Demo, cap: &Cap, blob_id: String) {
     assert!(cap.demo_id == object::id(demo), EInvalidCap);
     df::add(&mut demo.id, blob_id, MARKER);
