@@ -31,16 +31,22 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
     
   ]
   const getProfile=async()=>{
+    if (!account?.address) { // Add guard for account.address
+      setName("*"); // Reset name if address is not available
+      return;
+    }
     try{
-        const profile=await getProfileByUser(account?.address!)
-        setName( profile?.name!)
+        const profile=await getProfileByUser(account.address) // Use account.address safely
+        setName(profile?.name ?? "*"); // Use nullish coalescing for default name
           }catch(e){
             console.error("检查用户状态失败:", e);
+            setName("*"); // Reset name on error
           }
   }
   useEffect(() => {
+    // getProfile will be called, and it now has an internal check for account.address
     getProfile();
- }, [account]);
+ }, [account, getProfile]); // Added getProfile to dependency array as it's defined outside and used in effect
 
   return (
     <div className="container py-6">
@@ -50,7 +56,9 @@ export default function ProfileLayout({ children }: { children: React.ReactNode 
         </div>
         <div className="ml-4">
           <h2 className="text-xl font-bold">{name}</h2>
-          <p className="text-sm text-muted-foreground">{formatAddress(account?.address!)}</p>
+          <p className="text-sm text-muted-foreground">
+            {account?.address ? formatAddress(account.address) : "No address connected"}
+          </p>
         </div>
       </div>
 
