@@ -131,14 +131,14 @@ export default function AccessRequestsPage() {
               {pendingRequests.map((request) => (
                 <Card key={request.demo_id} className="overflow-hidden transition-all hover:shadow-md">
                   <CardHeader className="bg-muted/20 pb-3">
-                    <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="font-medium">
                           Project
                         </Badge>
-                        <CardTitle className="text-base font-medium">{request.demo_id}</CardTitle>
+                        <CardTitle className="text-lg">{request.demo_id}</CardTitle>
                       </div>
-                      <Badge variant="secondary" className="px-2 py-1 w-fit">
+                      <Badge variant="secondary" className="px-2 py-1">
                         <Clock className="h-3 w-3 mr-1" />
                         Pending
                       </Badge>

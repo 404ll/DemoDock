@@ -62,7 +62,6 @@ export function RequestAccessDialog({
       onError?.(error)
       setIsRequesting(false)
     }
-    
     setIsRequesting(false)
   }
 

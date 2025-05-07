@@ -1,112 +1,120 @@
-import React, { useState } from 'react';
-import { Transaction } from '@mysten/sui/transactions';
-import { networkConfig } from '@/contracts/index';
-import { useSignAndExecuteTransaction, useSuiClient } from '@mysten/dapp-kit';
-import { AlertCircle, FileUp, Upload, Check, Link, ExternalLink } from 'lucide-react';
-import { Button, Card, Flex, Text, Badge, Box, Progress, Separator } from '@radix-ui/themes';
-import { getAllowlistedKeyServers, SealClient } from '@mysten/seal';
-import { fromHex, toHex } from '@mysten/sui/utils';
-import { useRouter } from 'next/navigation';
+"use client"
+
+import type React from "react"
+import { useState } from "react"
+import { Transaction } from "@mysten/sui/transactions"
+import { networkConfig } from "@/contracts/index"
+import { useSignAndExecuteTransaction, useSuiClient } from "@mysten/dapp-kit"
+import { AlertCircle, FileUp, Upload, Check, Link, ExternalLink, Shield, FileCode } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
+import { Separator } from "@/components/ui/separator"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { getAllowlistedKeyServers, SealClient } from "@mysten/seal"
+import { fromHex, toHex } from "@mysten/sui/utils"
+import { useRouter } from "next/navigation"
 
 export type Data = {
-  status: string;
-  blobId: string;
-  endEpoch: string;
-  suiRefType: string;
-  suiRef: string;
-  suiBaseUrl: string;
-  blobUrl: string;
-  suiUrl: string;
-  isImage: string;  
-  isVideo: string;
-  isPPT?: boolean;
-};
+  status: string
+  blobId: string
+  endEpoch: string
+  suiRefType: string
+  suiRef: string
+  suiBaseUrl: string
+  blobUrl: string
+  suiUrl: string
+  isImage: string
+  isVideo: string
+  isPPT?: boolean
+}
 
 interface WalrusUploadProps {
-  policyObject: string;
-  cap_id: string;
-  moduleName: string;
+  policyObject: string
+  cap_id: string
+  moduleName: string
 }
 
 type WalrusService = {
-  id: string;
-  name: string;
-  publisherUrl: string;
-  aggregatorUrl: string;
-};
+  id: string
+  name: string
+  publisherUrl: string
+  aggregatorUrl: string
+}
 
 export function WalrusUpload({ policyObject, cap_id, moduleName }: WalrusUploadProps) {
-  const [file, setFile] = useState<File | null>(null);
-  const [info, setInfo] = useState<Data | null>(null);
-  const [isUploading, setIsUploading] = useState<boolean>(false);
-  const [uploadProgress, setUploadProgress] = useState<number>(0);
-  const [selectedService, setSelectedService] = useState<string>('service1');
-  const [uploadStep, setUploadStep] = useState<'idle' | 'encrypting' | 'uploading' | 'binding' | 'complete'>('idle');
-  const [error, setError] = useState<string | null>(null);
-  
-  const router = useRouter();
+  const [file, setFile] = useState<File | null>(null)
+  const [info, setInfo] = useState<Data | null>(null)
+  const [isUploading, setIsUploading] = useState<boolean>(false)
+  const [uploadProgress, setUploadProgress] = useState<number>(0)
+  const [selectedService, setSelectedService] = useState<string>("service1")
+  const [uploadStep, setUploadStep] = useState<"idle" | "encrypting" | "uploading" | "binding" | "complete">("idle")
+  const [error, setError] = useState<string | null>(null)
 
-  const SUI_VIEW_TX_URL = `https://suiscan.xyz/testnet/tx`;
-  const SUI_VIEW_OBJECT_URL = `https://suiscan.xyz/testnet/object`;
+  const router = useRouter()
 
-  const NUM_EPOCH = 1;
-  const packageId = networkConfig.testnet.variables.Package;
-  const suiClient = useSuiClient();
+  const SUI_VIEW_TX_URL = `https://suiscan.xyz/testnet/tx`
+  const SUI_VIEW_OBJECT_URL = `https://suiscan.xyz/testnet/object`
+
+  const NUM_EPOCH = 1
+  const packageId = networkConfig.testnet.variables.Package
+  const suiClient = useSuiClient()
   const client = new SealClient({
     suiClient,
-    serverObjectIds: getAllowlistedKeyServers('testnet'),
+    serverObjectIds: getAllowlistedKeyServers("testnet"),
     verifyKeyServers: false,
-  });
+  })
 
   const services: WalrusService[] = [
     {
-      id: 'service1',
-      name: 'walrus.space',
-      publisherUrl: '/publisher1',
-      aggregatorUrl: '/aggregator1',
+      id: "service1",
+      name: "walrus.space",
+      publisherUrl: "/publisher1",
+      aggregatorUrl: "/aggregator1",
     },
     {
-      id: 'service2',
-      name: 'staketab.org',
-      publisherUrl: '/publisher2',
-      aggregatorUrl: '/aggregator2',
+      id: "service2",
+      name: "staketab.org",
+      publisherUrl: "/publisher2",
+      aggregatorUrl: "/aggregator2",
     },
     {
-      id: 'service3',
-      name: 'redundex.com',
-      publisherUrl: '/publisher3',
-      aggregatorUrl: '/aggregator3',
+      id: "service3",
+      name: "redundex.com",
+      publisherUrl: "/publisher3",
+      aggregatorUrl: "/aggregator3",
     },
     {
-      id: 'service4',
-      name: 'nodes.guru',
-      publisherUrl: '/publisher4',
-      aggregatorUrl: '/aggregator4',
+      id: "service4",
+      name: "nodes.guru",
+      publisherUrl: "/publisher4",
+      aggregatorUrl: "/aggregator4",
     },
     {
-      id: 'service5',
-      name: 'banansen.dev',
-      publisherUrl: '/publisher5',
-      aggregatorUrl: '/aggregator5',
+      id: "service5",
+      name: "banansen.dev",
+      publisherUrl: "/publisher5",
+      aggregatorUrl: "/aggregator5",
     },
     {
-      id: 'service6',
-      name: 'everstake.one',
-      publisherUrl: '/publisher6',
-      aggregatorUrl: '/aggregator6',
+      id: "service6",
+      name: "everstake.one",
+      publisherUrl: "/publisher6",
+      aggregatorUrl: "/aggregator6",
     },
-  ];
+  ]
 
   function getAggregatorUrl(path: string): string {
-    const service = services.find((s) => s.id === selectedService);
-    const cleanPath = path.replace(/^\/+/, '').replace(/^v1\//, '');
-    return `/api${service?.aggregatorUrl}/v1/${cleanPath}`;
+    const service = services.find((s) => s.id === selectedService)
+    const cleanPath = path.replace(/^\/+/, "").replace(/^v1\//, "")
+    return `/api${service?.aggregatorUrl}/v1/${cleanPath}`
   }
 
   function getPublisherUrl(path: string): string {
-    const service = services.find((s) => s.id === selectedService);
-    const cleanPath = path.replace(/^\/+/, '').replace(/^v1\//, '');
-    return `/api${service?.publisherUrl}/v1/${cleanPath}`;
+    const service = services.find((s) => s.id === selectedService)
+    const cleanPath = path.replace(/^\/+/, "").replace(/^v1\//, "")
+    return `/api${service?.publisherUrl}/v1/${cleanPath}`
   }
 
   const { mutate: signAndExecute } = useSignAndExecuteTransaction({
@@ -119,390 +127,406 @@ export function WalrusUpload({ policyObject, cap_id, moduleName }: WalrusUploadP
           showEffects: true,
         },
       }),
-  });
+  })
 
-  const handleFileChange = (event: any) => {
-    const file = event.target.files[0];
-    if (file.size > 100 * 1024 * 1024) {
-      alert('文件大小必须小于100MB');
-      return;
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0]
+    if (!selectedFile) return
+
+    if (selectedFile.size > 100 * 1024 * 1024) {
+      alert("File size must be less than 100MB")
+      return
     }
-    
+
     const validTypes = [
-      'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
-      'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime',
-      'application/vnd.ms-powerpoint',
-      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-      'application/vnd.openxmlformats-officedocument.presentationml.slideshow',
-      'application/vnd.openxmlformats-officedocument.presentationml.template'
-    ];
-    
-    if (!validTypes.some(type => file.type === type)) {
-      alert('仅支持图片、视频和PowerPoint文件');
-      return;
+      "image/jpeg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+      "image/svg+xml",
+      "video/mp4",
+      "video/webm",
+      "video/ogg",
+      "video/quicktime",
+      "application/vnd.ms-powerpoint",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "application/vnd.openxmlformats-officedocument.presentationml.slideshow",
+      "application/vnd.openxmlformats-officedocument.presentationml.template",
+    ]
+
+    if (!validTypes.some((type) => selectedFile.type === type)) {
+      alert("Only images, videos, and PowerPoint files are supported")
+      return
     }
-    
-    setFile(file);
-    setInfo(null);
-  };
+
+    setFile(selectedFile)
+    setInfo(null)
+  }
 
   const handleUploadAndBind = async () => {
     if (!file) {
-      setError('请先选择文件');
-      return;
+      setError("Please select a file first")
+      return
     }
-    
+
     if (!policyObject || !cap_id) {
-      setError('缺少必要的项目配置');
-      return;
+      setError("Missing required project configuration")
+      return
     }
-    
-    setIsUploading(true);
-    setUploadStep('encrypting');
-    setUploadProgress(10);
-    setError(null);
-    
+
+    setIsUploading(true)
+    setUploadStep("encrypting")
+    setUploadProgress(10)
+    setError(null)
+
     try {
-      const reader = new FileReader();
-      
-      reader.onload = async function (event) {
+      const reader = new FileReader()
+
+      reader.onload = async (event) => {
         if (event.target && event.target.result) {
-          const result = event.target.result;
+          const result = event.target.result
           if (result instanceof ArrayBuffer) {
             try {
-              setUploadProgress(30);
-              const nonce = crypto.getRandomValues(new Uint8Array(5));
-              const policyObjectBytes = fromHex(policyObject);
-              const id = toHex(new Uint8Array([...policyObjectBytes, ...nonce]));
-              
+              setUploadProgress(30)
+              const nonce = crypto.getRandomValues(new Uint8Array(5))
+              const policyObjectBytes = fromHex(policyObject)
+              const id = toHex(new Uint8Array([...policyObjectBytes, ...nonce]))
+
               const { encryptedObject: encryptedBytes } = await client.encrypt({
                 threshold: 2,
                 packageId,
                 id,
                 data: new Uint8Array(result),
-              });
-              
-              setUploadStep('uploading');
-              setUploadProgress(60);
-              
-              const storageInfo = await storeBlob(encryptedBytes);
-              const uploadInfo = displayUpload(storageInfo.info, file.type);
-              
-              setUploadStep('binding');
-              setUploadProgress(80);
-              
-              await publishToContract(policyObject, cap_id, moduleName, uploadInfo.blobId);
-              
-              setUploadStep('complete');
-              setUploadProgress(100);
-              
+              })
+
+              setUploadStep("uploading")
+              setUploadProgress(60)
+
+              const storageInfo = await storeBlob(encryptedBytes)
+              const uploadInfo = displayUpload(storageInfo.info, file.type)
+
+              setUploadStep("binding")
+              setUploadProgress(80)
+
+              await publishToContract(policyObject, cap_id, moduleName, uploadInfo.blobId)
+
+              setUploadStep("complete")
+              setUploadProgress(100)
+
               setTimeout(() => {
-                router.push('/explore');
-              }, 2000);
-              
+                router.push("/explore")
+              }, 2000)
             } catch (error: any) {
-              console.error('处理过程中出错:', error);
-              setError(`上传失败: ${error.message}`);
-              setUploadStep('idle');
-              setIsUploading(false);
+              console.error("Error during processing:", error)
+              setError(`Upload failed: ${error.message}`)
+              setUploadStep("idle")
+              setIsUploading(false)
             }
           } else {
-            setError('文件格式不支持');
-            setUploadStep('idle');
-            setIsUploading(false);
+            setError("File format not supported")
+            setUploadStep("idle")
+            setIsUploading(false)
           }
         }
-      };
-      
-      reader.readAsArrayBuffer(file);
-      
+      }
+
+      reader.readAsArrayBuffer(file)
     } catch (error: any) {
-      setError(`上传过程出错: ${error.message}`);
-      setUploadStep('idle');
-      setIsUploading(false);
+      setError(`Error during upload: ${error.message}`)
+      setUploadStep("idle")
+      setIsUploading(false)
     }
-  };
+  }
 
   const publishToContract = (wl_id: string, cap_id: string, moduleName: string, blobId: string) => {
     return new Promise<void>((resolve, reject) => {
       try {
-        const tx = new Transaction();
+        const tx = new Transaction()
         tx.moveCall({
           target: `${packageId}::${moduleName}::publish`,
           arguments: [tx.object(wl_id), tx.object(cap_id), tx.pure.string(blobId)],
-        });
+        })
 
-        tx.setGasBudget(10000000);
-        
+        tx.setGasBudget(10000000)
+
         signAndExecute(
           {
             transaction: tx,
           },
           {
             onSuccess: async (result) => {
-              console.log('合约绑定成功:', result);
-              resolve();
+              console.log("Contract binding successful:", result)
+              resolve()
             },
             onError: (error) => {
-              console.error('合约绑定失败:', error);
-              setError(`绑定失败: ${error.message}`);
-              reject(error);
-            }
+              console.error("Contract binding failed:", error)
+              setError(`Binding failed: ${error.message}`)
+              reject(error)
+            },
           },
-        );
+        )
       } catch (error) {
-        reject(error);
+        reject(error)
       }
-    });
-  };
+    })
+  }
 
   const displayUpload = (storage_info: any, media_type: any): Data => {
-    let info;
-    const isPPT = media_type.includes('powerpoint') || 
-                 media_type.includes('presentation') ||
-                 media_type.endsWith('.ppt') || 
-                 media_type.endsWith('.pptx');
-    
-    if ('alreadyCertified' in storage_info) {
+    let info
+    const isPPT =
+      media_type.includes("powerpoint") ||
+      media_type.includes("presentation") ||
+      media_type.endsWith(".ppt") ||
+      media_type.endsWith(".pptx")
+
+    if ("alreadyCertified" in storage_info) {
       info = {
-        status: 'Already certified',
+        status: "Already certified",
         blobId: storage_info.alreadyCertified.blobId,
         endEpoch: storage_info.alreadyCertified.endEpoch,
-        suiRefType: 'Previous Sui Certified Event',
+        suiRefType: "Previous Sui Certified Event",
         suiRef: storage_info.alreadyCertified.event.txDigest,
         suiBaseUrl: SUI_VIEW_TX_URL,
         blobUrl: getAggregatorUrl(`/v1/blobs/${storage_info.alreadyCertified.blobId}`),
         suiUrl: `${SUI_VIEW_OBJECT_URL}/${storage_info.alreadyCertified.event.txDigest}`,
-        isImage: media_type.startsWith('image'),
-        isVideo: media_type.startsWith('video'),
+        isImage: media_type.startsWith("image"),
+        isVideo: media_type.startsWith("video"),
         isPPT: isPPT,
-      };
-    } else if ('newlyCreated' in storage_info) {
+      }
+    } else if ("newlyCreated" in storage_info) {
       info = {
-        status: 'Newly created',
+        status: "Newly created",
         blobId: storage_info.newlyCreated.blobObject.blobId,
         endEpoch: storage_info.newlyCreated.blobObject.storage.endEpoch,
-        suiRefType: 'Associated Sui Object',
+        suiRefType: "Associated Sui Object",
         suiRef: storage_info.newlyCreated.blobObject.id,
         suiBaseUrl: SUI_VIEW_OBJECT_URL,
         blobUrl: getAggregatorUrl(`/v1/blobs/${storage_info.newlyCreated.blobObject.blobId}`),
         suiUrl: `${SUI_VIEW_OBJECT_URL}/${storage_info.newlyCreated.blobObject.id}`,
-        isImage: media_type.startsWith('image'),
-        isVideo: media_type.startsWith('video'),
+        isImage: media_type.startsWith("image"),
+        isVideo: media_type.startsWith("video"),
         isPPT: isPPT,
-      };
+      }
     } else {
-      throw Error('Unhandled successful response!');
+      throw Error("Unhandled successful response!")
     }
-    setInfo(info);
-    return info;
-  };
+    setInfo(info)
+    return info
+  }
 
   const storeBlob = (encryptedData: Uint8Array) => {
-    const url = getPublisherUrl(`/v1/blobs?epochs=${NUM_EPOCH}`);
-    console.log('===DEBUG=== 上传URL:', url);
-    console.log('===DEBUG=== 选择的服务:', selectedService);
-    console.log('===DEBUG=== 加密数据大小:', encryptedData.byteLength);
-    console.log('===DEBUG=== 服务对象:', services.find(s => s.id === selectedService));
-    
+    const url = getPublisherUrl(`/v1/blobs?epochs=${NUM_EPOCH}`)
+    console.log("===DEBUG=== Upload URL:", url)
+    console.log("===DEBUG=== Selected service:", selectedService)
+    console.log("===DEBUG=== Encrypted data size:", encryptedData.byteLength)
+    console.log(
+      "===DEBUG=== Service object:",
+      services.find((s) => s.id === selectedService),
+    )
+
     return fetch(url, {
-      method: 'PUT',
+      method: "PUT",
       body: encryptedData,
       headers: {
-        'Content-Type': 'application/octet-stream'
-      }
-    }).then((response) => {
-      console.log('===DEBUG=== 响应状态:', response.status, response.statusText);
-      
-      if (response.status === 200) {
-        return response.json().then((info) => {
-          console.log('===DEBUG=== 成功响应:', info);
-          return { info };
-        });
-      } else {
-        console.error('===DEBUG=== 错误响应:', response.status);
-        response.text().then(text => console.error('===DEBUG=== 错误详情:', text));
-        alert('Error publishing the blob on Walrus, please select a different Walrus service.');
-        setIsUploading(false);
-        throw new Error('Something went wrong when storing the blob!');
-      }
-    }).catch(error => {
-      console.error('===DEBUG=== 捕获到错误:', error);
-      throw error;
-    });
-  };
+        "Content-Type": "application/octet-stream",
+      },
+    })
+      .then((response) => {
+        console.log("===DEBUG=== Response status:", response.status, response.statusText)
+
+        if (response.status === 200) {
+          return response.json().then((info) => {
+            console.log("===DEBUG=== Success response:", info)
+            return { info }
+          })
+        } else {
+          console.error("===DEBUG=== Error response:", response.status)
+          response.text().then((text) => console.error("===DEBUG=== Error details:", text))
+          alert("Error publishing the blob on Walrus, please select a different Walrus service.")
+          setIsUploading(false)
+          throw new Error("Something went wrong when storing the blob!")
+        }
+      })
+      .catch((error) => {
+        console.error("===DEBUG=== Caught error:", error)
+        throw error
+      })
+  }
 
   return (
-    <Card className="p-6 shadow-md">
-      <Flex direction="column" gap="4">
-        <Box>
-          <Text size="5" weight="bold" className="mb-2">上传加密文件</Text>
-          <Text size="2" color="gray">
-            上传后的文件将被加密并存储在Walrus服务上，自动绑定到您的项目
-          </Text>
-        </Box>
-        
-        <Separator size="4" />
-        
-        <Card className="p-4 border-2 border-blue-100">
-          <Flex direction="column" gap="3">
-            <Flex gap="2" align="center" className="mb-2">
-              <Text size="2">Walrus服务提供商:</Text>
-              <select
-                value={selectedService}
-                onChange={(e) => setSelectedService(e.target.value)}
-                className="px-3 py-1 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                aria-label="Select Walrus service"
-                disabled={isUploading}
-              >
-                {services.map((service) => (
-                  <option key={service.id} value={service.id}>
-                    {service.name}
-                  </option>
-                ))}
-              </select>
-            </Flex>
-            
-            <Box className={`border-2 border-dashed ${isUploading ? 'border-gray-300 bg-gray-50' : 'border-blue-300 hover:bg-blue-50'} rounded-lg p-6 text-center transition-colors`}>
-              <Flex direction="column" align="center" gap="2">
-                <FileUp size={32} className={isUploading ? "text-gray-400" : "text-blue-400"} />
-                
-                {!isUploading ? (
-                  <>
-                    <Text size="2" as="label" htmlFor="file-upload" className="cursor-pointer">
-                      <span className="text-blue-500 font-medium">点击选择文件</span>
-                      <span> 或拖放文件到此处</span>
-                    </Text>
-                    
-                    <input
-                      id="file-upload"
-                      type="file"
-                      onChange={handleFileChange}
-                      accept="image/*,video/*,.ppt,.pptx,.ppsx,.potx,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation"
-                      className="hidden"
-                      aria-label="选择文件上传"
-                      disabled={isUploading}
-                    />
-                  </>
-                ) : (
-                  <Text size="2" color="gray">文件处理中，请稍候...</Text>
-                )}
-                
-                {file && (
-                  <Badge color="green" className="mt-2">
-                    已选择: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                  </Badge>
-                )}
-                
-                <Text size="1" color="gray">
-                  文件大小限制为100MB。支持图片、视频和PowerPoint文件。
-                </Text>
-              </Flex>
-            </Box>
-            
-            {error && (
-              <Flex gap="2" align="center" className="p-3 bg-red-50 rounded-md">
-                <AlertCircle size={16} className="text-red-500" />
-                <Text size="2" color="red">{error}</Text>
-              </Flex>
+    <Card className="w-full max-w-3xl mx-auto">
+      <CardHeader className="space-y-1 pb-2">
+        <CardTitle className="text-2xl font-bold">Encrypted File Upload</CardTitle>
+        <CardDescription>
+          Files will be encrypted and stored on Walrus services, automatically binding to your project
+        </CardDescription>
+      </CardHeader>
+
+      <Separator className="mb-4" />
+
+      <CardContent className="space-y-6">
+        <div className="flex items-center justify-between bg-slate-50 p-4 rounded-lg">
+          <div className="flex items-center gap-2">
+            <Shield className="h-5 w-5 text-blue-500" />
+            <span className="text-sm font-medium">Walrus Service Provider:</span>
+          </div>
+
+          <Select value={selectedService} onValueChange={setSelectedService} disabled={isUploading}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select service" />
+            </SelectTrigger>
+            <SelectContent>
+              {services.map((service) => (
+                <SelectItem key={service.id} value={service.id}>
+                  {service.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div
+          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+            isUploading ? "border-slate-200 bg-slate-50" : "border-blue-200 hover:bg-blue-50 cursor-pointer"
+          }`}
+        >
+          <div className="flex flex-col items-center gap-3">
+            <div className={`p-3 rounded-full ${isUploading ? "bg-slate-100" : "bg-blue-50"}`}>
+              <FileUp size={28} className={isUploading ? "text-slate-400" : "text-blue-500"} />
+            </div>
+
+            {!isUploading ? (
+              <>
+                <div className="space-y-1">
+                  <label htmlFor="file-upload" className="text-sm font-medium cursor-pointer">
+                    <span className="text-blue-600">Click to select a file</span>
+                    <span className="text-slate-600"> or drag and drop</span>
+                  </label>
+
+                  <p className="text-xs text-slate-500">100MB max. Supports images, videos, and PowerPoint files.</p>
+                </div>
+
+                <input
+                  id="file-upload"
+                  type="file"
+                  onChange={handleFileChange}
+                  accept="image/*,video/*,.ppt,.pptx,.ppsx,.potx,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                  className="hidden"
+                  aria-label="Select file to upload"
+                  disabled={isUploading}
+                />
+              </>
+            ) : (
+              <p className="text-sm text-slate-500">Processing file, please wait...</p>
             )}
-            
-            {isUploading && (
-              <Box className="p-4 border border-blue-100 rounded-md bg-blue-50">
-                <Flex direction="column" gap="2">
-                  <Flex justify="between">
-                    <Text size="2" weight="medium">
-                      {uploadStep === 'encrypting' && '正在加密文件...'}
-                      {uploadStep === 'uploading' && '正在上传到Walrus...'}
-                      {uploadStep === 'binding' && '正在绑定到项目...'}
-                      {uploadStep === 'complete' && '处理完成!'}
-                    </Text>
-                    <Text size="2">{uploadProgress}%</Text>
-                  </Flex>
-                  
-                  <Progress value={uploadProgress} max={100} size="2" 
-                    color={uploadStep === 'complete' ? 'green' : 'blue'} />
-                  
-                  <Text size="1" color="gray">
-                    {uploadStep === 'encrypting' && '加密确保文件安全...'}
-                    {uploadStep === 'uploading' && '上传到分布式存储中...'}
-                    {uploadStep === 'binding' && '将文件绑定到您的项目...'}
-                    {uploadStep === 'complete' && '所有步骤完成，即将跳转...'}
-                  </Text>
-                </Flex>
-              </Box>
+
+            {file && (
+              <div className="mt-2 flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-xs">
+                <FileCode size={14} />
+                <span className="font-medium">
+                  {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                </span>
+              </div>
             )}
-            
-            <Button
+          </div>
+        </div>
+
+        {error && (
+          <div className="flex items-center gap-2 p-3 bg-red-50 text-red-600 rounded-md text-sm">
+            <AlertCircle size={16} />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {isUploading && (
+          <div className="p-4 border border-blue-100 rounded-md bg-blue-50">
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium">
+                  {uploadStep === "encrypting" && "Encrypting file..."}
+                  {uploadStep === "uploading" && "Uploading to Walrus..."}
+                  {uploadStep === "binding" && "Binding to project..."}
+                  {uploadStep === "complete" && "Processing complete!"}
+                </span>
+                <span className="text-sm">{uploadProgress}%</span>
+              </div>
+
+              <Progress value={uploadProgress} className={uploadStep === "complete" ? "bg-green-100" : "bg-blue-100"} />
+
+              <p className="text-xs text-slate-500">
+                {uploadStep === "encrypting" && "Encryption ensures your file is secure..."}
+                {uploadStep === "uploading" && "Uploading to distributed storage..."}
+                {uploadStep === "binding" && "Binding file to your project..."}
+                {uploadStep === "complete" && "All steps completed, redirecting soon..."}
+              </p>
+            </div>
+          </div>
+        )}
+      </CardContent>
+
+      <CardFooter className="flex flex-col gap-4">
+        <Button
           onClick={handleUploadAndBind}
           disabled={!file || isUploading || !policyObject || !cap_id}
-          className="mt-2"
-          variant="solid"
-          color="blue"
-          size="3"
+          className="w-full"
+          size="lg"
         >
-          <Flex gap="2" align="center">
-            <Upload size={16} /> 
-            加密上传并绑定到项目
-          </Flex>
+          <Upload className="mr-2 h-4 w-4" />
+          Encrypt, Upload & Bind to Project
         </Button>
-          </Flex>
-        </Card>
-        
-        {uploadStep === 'complete' && info && (
-          <Box className="p-4 bg-green-50 border-2 border-green-100 rounded-md">
-            <Flex direction="column" gap="3">
-              <Flex align="center" gap="2">
-                <Check size={18} className="text-green-600" />
-                <Text size="3" weight="medium" color="green">处理完成!</Text>
-              </Flex>
-              
-              <Separator size="1" className="my-1" />
-              
-              <Flex gap="2" align="center">
-                <Text size="2">文件ID:</Text>
-                <Badge variant="soft" color="gray" size="1">
+
+        {uploadStep === "complete" && info && (
+          <div className="w-full p-4 bg-green-50 border border-green-200 rounded-md">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="bg-green-100 p-1 rounded-full">
+                  <Check size={16} className="text-green-600" />
+                </div>
+                <span className="font-medium text-green-700">Processing Complete!</span>
+              </div>
+
+              <Separator />
+
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-slate-600">File ID:</span>
+                <Badge variant="outline" className="font-mono">
                   {info.blobId.substring(0, 16)}...
                 </Badge>
-              </Flex>
-              
-              <Flex gap="3">
-                <Button size="1" variant="soft" asChild>
+              </div>
+
+              <div className="flex gap-3">
+                <Button variant="outline" size="sm" asChild>
                   <a
                     href={info.blobUrl}
                     target="_blank"
                     rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1"
                   >
-                    <Flex gap="1" align="center">
-                      <Link size={12} /> 
-                      查看加密文件
-                    </Flex>
+                    <Link size={14} />
+                    View Encrypted File
                   </a>
                 </Button>
-                
-                <Button size="1" variant="soft" asChild>
+
+                <Button variant="outline" size="sm" asChild>
                   <a
                     href={info.suiUrl}
                     target="_blank"
                     rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1"
                   >
-                    <Flex gap="1" align="center">
-                      <ExternalLink size={12} /> 
-                      查看区块链记录
-                    </Flex>
+                    <ExternalLink size={14} />
+                    View Blockchain Record
                   </a>
                 </Button>
-              </Flex>
-              
-              <Text size="2" color="green">
-                上传和绑定成功，即将跳转到浏览页面...
-              </Text>
-            </Flex>
-          </Box>
+              </div>
+
+              <p className="text-sm text-green-600">Upload and binding successful, redirecting to explore page...</p>
+            </div>
+          </div>
         )}
-      </Flex>
+      </CardFooter>
     </Card>
-  );
+  )
 }
 
-export default WalrusUpload;
+export default WalrusUpload

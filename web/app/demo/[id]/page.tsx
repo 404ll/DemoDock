@@ -95,12 +95,12 @@ export default function DemoDetailPage() {
 
   const handleDownload = async () => {
     if (!demoId || !account?.address) {
-      setError("请先连接钱包");
+      setError("Please connect your wallet first");
       return;
     }
 
     if (blobIds.length === 0) {
-      setError("该Demo没有可下载的文件");
+      setError("This demo has no downloadable files");
       return;
     }
 
@@ -165,8 +165,8 @@ export default function DemoDetailPage() {
             setIsDecrypting(false);
           },
           onError: (error) => {
-            console.error('签名失败:', error);
-            setError(`签名失败: ${error.message}`);
+            console.error('Signature failed:', error);
+            setError(`Signature failed: ${error.message}`);
             setIsDecrypting(false);
           }
         }
@@ -174,7 +174,7 @@ export default function DemoDetailPage() {
     } catch (error: any) {
       console.error('Error:', error);
       setIsDecrypting(false);
-      setError(`处理过程出错: ${error.message}`);
+      setError(`Processing error: ${error.message}`);
     }
   }
 
@@ -186,13 +186,13 @@ export default function DemoDetailPage() {
     return (
       <div className="media-item my-4 border rounded-lg p-4">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-medium">文件 {index + 1} ({mimeType})</h3>
+          <h3 className="text-sm font-medium">File {index + 1} ({mimeType})</h3>
           <Button size="sm" variant="outline" asChild>
             <a 
               href={fileUrl} 
               download={`demo-file-${index}.${isVideo ? 'mp4' : isPPT ? 'pptx' : 'bin'}`}
             >
-              下载文件
+              Download file
             </a>
           </Button>
         </div>
@@ -206,16 +206,16 @@ export default function DemoDetailPage() {
               className="max-h-[300px] rounded bg-gray-100"
               onError={() => setLoadError(true)}
             >
-              您的浏览器不支持视频播放。
+              Your browser doesn't support video playback.
             </video>
           ) : (
             <div className="flex flex-col items-center justify-center h-[200px] bg-gray-100 rounded">
-              <p className="text-gray-500">视频加载失败，请使用下载按钮查看</p>
+              <p className="text-gray-500">Video loading failed, please use the download button to view</p>
             </div>
           )
         ) : isPPT ? (
           <div className="text-center p-6 border rounded">
-            <p>PowerPoint文件</p>
+            <p>PowerPoint file</p>
           </div>
         ) : (
           <div>
@@ -228,7 +228,7 @@ export default function DemoDetailPage() {
               />
             ) : (
               <div className="flex flex-col items-center justify-center h-[200px] bg-gray-100 rounded">
-                <p className="text-gray-500">文件预览失败，请使用下载按钮查看</p>
+                <p className="text-gray-500">File preview failed, please use the download button to view</p>
               </div>
             )}
           </div>
@@ -286,12 +286,12 @@ export default function DemoDetailPage() {
               {isDecrypting ? (
                 <>
                   <span className="animate-spin mr-2">◌</span>
-                  解密中...
+                  Decrypting...
                 </>
               ) : (
                 <>
                   <Download className="mr-2 h-4 w-4" />
-                  解密并下载Demo文件
+                  Decrypt and download demo files
                 </>
               )}
             </Button>
@@ -320,9 +320,9 @@ export default function DemoDetailPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh]">
           <DialogHeader>
-            <DialogTitle>解密文件预览</DialogTitle>
+            <DialogTitle>Decrypted File Preview</DialogTitle>
             <DialogDescription>
-              解密成功！您现在可以预览或下载这些文件。
+              Decryption successful! You can now preview or download these files.
             </DialogDescription>
           </DialogHeader>
           
@@ -339,7 +339,7 @@ export default function DemoDetailPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-center py-8 text-gray-500">没有找到可预览的文件</p>
+              <p className="text-center py-8 text-gray-500">No preview files found</p>
             )}
           </div>
           
@@ -356,11 +356,11 @@ export default function DemoDetailPage() {
                   document.body.removeChild(link);
                 }}
               >
-                下载文件
+                Download file
               </Button>
             )}
             <Button onClick={() => setIsDialogOpen(false)}>
-              关闭
+              Close
             </Button>
           </div>
         </DialogContent>

@@ -42,13 +42,13 @@ export default function CreatePage() {
     setTags(tags.filter((tag) => tag !== tagToRemove))
   }
 
+  // 从URL获取demoId并只设置一次
   useEffect(() => {
     if (demoId) {
       console.log("从URL获取到Demo ID:", demoId);
-      // 设置表单中的demoId值或更新状态
       setSelectedDemoId(demoId);
     }
-  }, [demoId]);
+  }, []); // 空依赖数组，只在组件挂载时执行一次
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
@@ -75,29 +75,33 @@ export default function CreatePage() {
   
   useEffect(() => {
     async function fetchCapId() {
-      if (currentAccount?.address) {
+      if (currentAccount?.address && selectedDemoId) {
         try {
-          const demoId = selectedDemoId;
-          const result = await getCapByDemoId(currentAccount.address, demoId!);
-          setCapId(result);
-          setPolicyId(demoId!);
-          console.log("获取到的CapID:", result);
-          console.log("获取到的PolicyID:", demoId);
+          const result = await getCapByDemoId(currentAccount.address, selectedDemoId);
+          
+          // 只有当结果有效时才更新状态
+          if (result) {
+            console.log("获取到的CapID:", result);
+            console.log("获取到的PolicyID:", selectedDemoId);
+            setCapId(result);
+            setPolicyId(selectedDemoId);
+          }
         } catch (error) {
           console.error("获取CapID失败:", error);
         }
       }
     }
 
-    fetchCapId();
-  }, [currentAccount,selectedDemoId]);
+    // 确保只有当两个值都存在时才执行
+    if (currentAccount?.address && selectedDemoId) {
+      fetchCapId();
+    }
+  }, [currentAccount?.address, selectedDemoId]);
 
 
   return (
     <div className="container py-8">
-      <div className="mx-auto max-w-2xl">
-        <h1 className="text-xl font-bold mb-4">上传加密文件</h1>
-        
+      <div className="mx-auto max-w-2xl"> 
         {/* 只保留WalrusUpload组件 */}
         <WalrusUpload 
           policyObject={policyId} 

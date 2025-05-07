@@ -9,11 +9,13 @@ import { cn } from "@/utils"
 import { useCurrentAccount } from '@mysten/dapp-kit'
 import { ConnectButton } from '@mysten/dapp-kit'
 import { getProfileByUser,getSuperAdmin } from '@/contracts/query'
+import { useProfile } from '@/context/ProfileContext';
 
 export function Navbar() {
   const pathname = usePathname()
   const router = useRouter()
   const account = useCurrentAccount();
+  const { profileId, hasProfile } = useProfile();
   const [DemoAccount, setDemoAccount] = useState("");
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   
@@ -21,13 +23,11 @@ export function Navbar() {
     // 重置状态，确保切换账户时UI正确更新
     setDemoAccount("");
     setIsSuperAdmin(false);
-    
     try {
       if (!account || !account.address) {
         console.log("账户未连接或地址不可用");
         return;
       }
-      
       // 添加地址格式验证
       if (!account.address.startsWith("0x") || account.address.length < 42) {
         console.log(`无效的地址格式: ${account.address}`);
@@ -59,7 +59,6 @@ export function Navbar() {
         } catch (err) {
           console.error("检查用户状态失败:", err);
         }
-     
       
     } catch (error) {
       console.error("获取用户信息过程中出错:", error);
@@ -91,7 +90,7 @@ export function Navbar() {
               )}
 
               {/* 只有有Profile的用户可以看到这些按钮 */}
-              {DemoAccount && (
+              {hasProfile && (
                 <>
                   <Button variant="outline" size="sm" asChild>
                     <Link href="/create">Create</Link>
@@ -112,3 +111,4 @@ export function Navbar() {
   )
 
 }
+

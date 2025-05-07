@@ -36,6 +36,7 @@ export async function loadMockUserProjects(user:string ): Promise<Project[]> {
     return [];
   }
   const demos = await getDemoByProfile(profile);
+  console.log("源demo:", demos);
   const allUserProjects: Project[] = [];
   // 将每个demo转换为Project格式
   const profileProjects = demos.map(demo => ({

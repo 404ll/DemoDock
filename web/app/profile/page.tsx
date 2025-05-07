@@ -71,10 +71,9 @@ export default function ProjectPage() {
       try {
         // 使用loadMockUserProjects获取用户的项目
         const projects = await loadMockUserProjects(account.address)
-
+        console.log("获取到的项目:", projects)
         // 设置获取到的项目
         setUserProjects(projects)
-
         if (projects.length > 0) {
           setSelectedProject(projects[0])
           // 默认已有访问权限
@@ -102,15 +101,6 @@ export default function ProjectPage() {
 
     fetchUserProjects()
   }, [account, router])
-
-  const handleRequestAccess = () => {
-    setIsRequesting(true)
-    // 模拟请求过程
-    setTimeout(() => {
-      setIsRequesting(false)
-      setAccessRequested(true)
-    }, 2000)
-  }
 
 
   // 加载中状态
@@ -142,12 +132,12 @@ export default function ProjectPage() {
           <div className="bg-muted inline-flex p-4 rounded-full mb-6">
             <FileText className="h-8 w-8 text-muted-foreground" />
           </div>
-          <h2 className="text-3xl font-bold mb-4">您还没有创建任何项目</h2>
-          <p className="text-muted-foreground mb-8">开始创建您的第一个项目，展示您的创意并与他人分享</p>
+          <h2 className="text-3xl font-bold mb-4">You haven't created any projects yet.</h2>
+          <p className="text-muted-foreground mb-8">Start creating your first Demo, showcase your creativity and share it with others!</p>
           <Button asChild size="lg" className="gap-2">
             <Link href="/upload">
               <Upload className="h-4 w-4" />
-              创建新项目
+              Create New Demo
             </Link>
           </Button>
         </div>
@@ -163,14 +153,8 @@ export default function ProjectPage() {
           <div className="bg-muted inline-flex p-4 rounded-full mb-6">
             <AlertCircle className="h-8 w-8 text-muted-foreground" />
           </div>
-          <h2 className="text-3xl font-bold mb-4">项目未找到</h2>
+          <h2 className="text-3xl font-bold mb-4">Demo Not Found</h2>
           <p className="text-muted-foreground mb-8">无法加载所请求的项目，请返回探索页面查看其他项目</p>
-          <Button asChild size="lg" variant="outline" className="gap-2">
-            <Link href="/explore">
-              <ArrowLeft className="h-4 w-4" />
-              返回探索页面
-            </Link>
-          </Button>
         </div>
       </div>
     )
@@ -178,12 +162,6 @@ export default function ProjectPage() {
 
   return (
     <div className="container max-w-6xl py-8 md:py-12">
-      <Button variant="ghost" size="sm" asChild className="mb-6 group transition-all hover:translate-x-[-2px]">
-        <Link href="/explore" className="flex items-center">
-          <ArrowLeft className="mr-2 h-4 w-4 transition-transform group-hover:translate-x-[-2px]" />
-          返回探索页面
-        </Link>
-      </Button>
 
       <div className="space-y-8">
         {/* 项目标题和信息 */}
@@ -191,29 +169,14 @@ export default function ProjectPage() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight md:text-4xl">{selectedProject.name}</h1>
             <div className="mt-3 flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Avatar className="h-8 w-8 border">
-                  <AvatarImage
-                    src={`https://api.dicebear.com/7.x/identicon/svg?seed=${selectedProject.profile}`}
-                    alt={selectedProject.profile}
-                  />
-                  <AvatarFallback>{selectedProject.profile.charAt(0).toUpperCase()}</AvatarFallback>
-                </Avatar>
-                <span className="text-sm font-medium">{selectedProject.profile}</span>
-              </div>
               <div className="flex items-center gap-1 text-sm text-muted-foreground">
               </div>
             </div>
           </div>
-
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" className="gap-2">
-              <Eye className="h-4 w-4" />
-              查看详情
-            </Button>
             <Button variant="default" size="sm" className="gap-2">
               <ExternalLink className="h-4 w-4" />
-              访问项目
+              Access Demo
             </Button>
           </div>
         </div>
@@ -227,7 +190,7 @@ export default function ProjectPage() {
               <CardHeader className="bg-muted/50 pb-4 border-b">
                 <CardTitle className="text-xl flex items-center gap-2">
                   <FileText className="h-5 w-5 text-primary/70" />
-                  关于此项目
+                  Project Description
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-6 px-6">
@@ -240,29 +203,28 @@ export default function ProjectPage() {
             </Card>
 
             {/* 项目内容 */}
-            {hasAccess ? (
               <Card className="overflow-hidden border-none shadow-md hover:shadow-lg transition-shadow duration-300">
                 <CardHeader className="bg-muted/50 pb-4 border-b">
                   <CardTitle className="text-xl flex items-center gap-2">
                     <Video className="h-5 w-5 text-primary/70" />
-                    项目内容
+                    Project Content
                   </CardTitle>
-                  <CardDescription className="text-sm text-muted-foreground/80">查看项目文件和演示</CardDescription>
+                  <CardDescription className="text-sm text-muted-foreground/80">View the project presentation file</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-6 px-6">
                   <Tabs defaultValue="files" className="w-full">
                     <TabsList className="mb-6 w-full justify-start rounded-md bg-muted/70 p-1">
                       <TabsTrigger value="files" className="flex items-center gap-2 rounded-md">
                         <FileText className="h-4 w-4" />
-                        文件
+                        PPT
                       </TabsTrigger>
                       <TabsTrigger value="demo" className="flex items-center gap-2 rounded-md">
                         <Video className="h-4 w-4" />
-                        演示
+                        Video
                       </TabsTrigger>
                     </TabsList>
                     <TabsContent value="files" className="space-y-4">
-                      <div className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50">
+                      {/* <div className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50">
                         <div className="flex items-center gap-4">
                           <div className="rounded-md bg-primary/10 p-2">
                             <FileText className="h-6 w-6 text-primary" />
@@ -272,7 +234,8 @@ export default function ProjectPage() {
                             <p className="text-sm text-muted-foreground">包含项目的完整源代码和资源文件</p>
                           </div>
                         </div>
-                        <div className="flex gap-2">
+                      </div> */}
+                      <div className="flex gap-2">
                           <Button
                             variant="outline"
                             size="sm"
@@ -280,58 +243,21 @@ export default function ProjectPage() {
                             className="gap-2"
                           >
                             <Upload className="h-4 w-4" />
-                            上传文件
+                            Upload Files
                           </Button>
                         </div>
-                      </div>
                     </TabsContent>
   
                   </Tabs>
                 </CardContent>
               </Card>
-            ) : (
-              <Card className="overflow-hidden border-none shadow-sm">
-                <CardContent className="p-8 flex flex-col items-center justify-center gap-6 text-center">
-                  <div className="rounded-full bg-muted p-4">
-                    <Lock className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold mb-2">此内容已加密</h3>
-                    <p className="text-muted-foreground max-w-md mx-auto">
-                      您需要向项目所有者请求访问权限才能查看完整内容。请求批准后，您将获得查看和下载权限。
-                    </p>
-                  </div>
-                  {accessRequested ? (
-                    <Alert className="max-w-md bg-green-50 text-green-800 dark:bg-green-950 dark:text-green-300 border-green-200 dark:border-green-900">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>已请求访问</AlertTitle>
-                      <AlertDescription>您的请求已发送给项目所有者。授予访问权限后，您将收到通知。</AlertDescription>
-                    </Alert>
-                  ) : (
-                    <Button onClick={handleRequestAccess} disabled={isRequesting} className="gap-2">
-                      {isRequesting ? (
-                        <>请求中...</>
-                      ) : (
-                        <>
-                          <Key className="h-4 w-4" />
-                          请求访问
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            )}
           </div>
 
           <div className="space-y-8">
-            {/* 访问信息 */}
-   
-
             {/* 其他项目 */}
             <Card className="overflow-hidden border-none shadow-sm">
               <CardHeader className="bg-muted/50 pb-4">
-                <CardTitle>您的其他项目</CardTitle>
+                <CardTitle>Your Other Demo</CardTitle>
               </CardHeader>
               <CardContent className="pt-6">
                 <div className="space-y-4">
@@ -340,7 +266,7 @@ export default function ProjectPage() {
                     .map((project) => (
                       <Link
                         key={project.id}
-                        href={`/project?id=${project.id}`}
+                        href={`/demo/id=${project.id}`}
                         className="flex gap-4 rounded-lg hover:bg-muted/50 p-3 transition-colors border border-transparent hover:border-border"
                       >
                         <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
@@ -355,11 +281,11 @@ export default function ProjectPage() {
 
                   {userProjects.length === 1 && (
                     <div className="text-center p-6 bg-muted/30 rounded-lg">
-                      <p className="text-muted-foreground mb-3">您目前只有一个项目</p>
+                      <p className="text-muted-foreground mb-3">You currently only have one demo.</p>
                       <Button asChild size="sm" className="gap-2">
                         <Link href="/upload">
                           <Upload className="h-4 w-4" />
-                          创建新项目
+                          Create New Demo
                         </Link>
                       </Button>
                     </div>

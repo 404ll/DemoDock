@@ -22,12 +22,14 @@ import {
   createProfile,
   getProfileByUser,
 } from "@/contracts/query"
+import { useProfile } from '@/context/ProfileContext';
 
 export default function CreateAccountPage() {
   const router = useRouter()
   const account = useCurrentAccount()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
+  const { refreshProfile } = useProfile();
 
   const { handleSignAndExecuteTransaction: createProfileHandler } =
     useBetterSignAndExecuteTransaction({ tx: createProfile })
@@ -38,17 +40,13 @@ export default function CreateAccountPage() {
       return
     }
     setIsSubmitting(true)
-
     createProfileHandler({ name })
       .onSuccess(async (result) => {
         console.log("Profile created:", result)
-
-        // 查询 Profile 是否写入链上
-        const profile = await getProfileByUser(account.address)
-        console.log("Fetched profile:", profile)
-
+        // 主动刷新个人资料状态
+        await refreshProfile();
+        
         setShowSuccess(true)
-
         // 自动跳转到主页或 Demo 创建页（可改）
         setTimeout(() => {
           router.push("/explore")
