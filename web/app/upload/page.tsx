@@ -77,10 +77,10 @@ export default function CreatePage() {
     async function fetchCapId() {
       if (currentAccount?.address) {
         try {
-          const demoId = "0x0567810580f7b472f4034543b75097486c1ecac8c85050cde00192a848369522";
-          const result = await getCapByDemoId(currentAccount.address, demoId);
+          const demoId = selectedDemoId;
+          const result = await getCapByDemoId(currentAccount.address, demoId!);
           setCapId(result);
-          setPolicyId(demoId);
+          setPolicyId(demoId!);
           console.log("获取到的CapID:", result);
           console.log("获取到的PolicyID:", demoId);
         } catch (error) {
@@ -92,7 +92,6 @@ export default function CreatePage() {
     fetchCapId();
   }, [currentAccount]);
 
-  // 这里应替换为真实接口获取 policyObject
 
   return (
     <div className="container py-8">

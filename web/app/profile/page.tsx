@@ -207,9 +207,11 @@ export default function ProjectPage() {
                             <FileText className="h-5 w-5 text-muted-foreground" />
                             <div>
                               <p className="font-medium">项目源代码</p>
-            <Button variant="link" onClick={() => router.push("/upload")}>
-              Upload files
-            </Button>                            </div>
+                              <Button variant="link" 
+                                onClick={() => router.push(`/upload?demoId=${selectedProject.id}`)}
+                              >              Upload files
+                                          </Button> 
+                                          </div>
                           </div>
                           <Button size="sm" variant="ghost" className="gap-2">
                             <Download className="h-4 w-4" />

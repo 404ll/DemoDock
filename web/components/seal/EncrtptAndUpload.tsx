@@ -434,44 +434,18 @@ export function WalrusUpload({ policyObject, cap_id, moduleName }: WalrusUploadP
             )}
             
             <Button
-  onClick={handleUploadAndBind}
-  disabled={!file || isUploading || !policyObject || !cap_id}
-  className="mt-2 relative overflow-hidden group transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-70 disabled:shadow-none"
-  style={{
-    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-    border: 'none',
-    padding: '12px 20px',
-    borderRadius: '8px',
-  }}
-  size="3"
->
-  <Flex gap="2" align="center" className="relative z-10">
-    {isUploading ? (
-      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-      </svg>
-    ) : (
-      <Upload size={18} className="text-white group-hover:scale-110 transition-transform duration-300" />
-    )}
-    <Text 
-      size="3" 
-      className="text-white font-medium group-hover:translate-x-1 transition-transform duration-300"
-    >
-      {isUploading ? '处理中...' : '加密上传并绑定到项目'}
-    </Text>
-  </Flex>
-  
-  {/* 添加悬停时的波纹效果 */}
-  <div className="absolute top-0 left-0 w-full h-full opacity-0 group-hover:opacity-20 transition-opacity duration-300 bg-white rounded-[100%] scale-0 group-hover:scale-150 origin-center transform-gpu" style={{ 
-    transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)' 
-  }}></div>
-  
-  {/* 添加禁用状态的蒙版 */}
-  {(!file || !policyObject || !cap_id) && (
-    <div className="absolute inset-0 bg-gray-500 bg-opacity-40 backdrop-filter backdrop-blur-[1px] rounded-lg"></div>
-  )}
-</Button>
+          onClick={handleUploadAndBind}
+          disabled={!file || isUploading || !policyObject || !cap_id}
+          className="mt-2"
+          variant="solid"
+          color="blue"
+          size="3"
+        >
+          <Flex gap="2" align="center">
+            <Upload size={16} /> 
+            加密上传并绑定到项目
+          </Flex>
+        </Button>
           </Flex>
         </Card>
         
