@@ -29,7 +29,8 @@ export default function ExplorePage() {
           id: p.id,
           name: p.name,
           des: p.des,
-          profile: p.profile
+          profile: p.profile,
+          visitor_list: p.visitor_list || [] // 确保visitor_list存在
         }))
         
         setProjects(adaptedProjects)
@@ -42,7 +43,8 @@ export default function ExplorePage() {
           id: p.id,
           name: p.name,
           des: p.des,
-          profile: p.profile
+          profile: p.profile,
+          visitor_list: p.visitor_list || [] // 确保visitor_list存在
         }))
         
         setProjects(fallbackProjects)

@@ -6,42 +6,49 @@ import { Project,Profile } from "@/types/index";
 export async function loadMockProjects(): Promise<Project[]> {
   const profiles = await getAllProfile();
   const allProjects: Project[] = [];
-  console.log("Profiles:", profiles);
   // 对每个profile获取相关的demos
   for (const profile of profiles) {
+    if (!profile) {
+      console.error("Profile is null, skipping demo retrieval.");
+      return [];
+    }
     const demos = await getDemoByProfile(profile);
-    
     // 将每个demo转换为Project格式
     const profileProjects = demos.map(demo => ({
       id: demo.id.id,
       name: demo.name,
       des: demo.des,
-      profile: profile.name // 使用profile的name作为profile字段
+      profile: profile.name ,// 使用profile的name作为profile字段
+      visitor_list: demo.visitor_list // 添加visitor_list字段
     }));
-    console.log("Profile Projects:", profileProjects);
+    
     // 添加到总项目列表
     allProjects.push(...profileProjects);
   }
-
+  console.log("all Projects:", allProjects);
   return allProjects;
 }
 
 export async function loadMockUserProjects(user:string ): Promise<Project[]> {
   const profile = await getProfileByUser(user);
+  if (!profile) {
+    console.error("Profile is null, skipping demo retrieval.");
+    return [];
+  }
   const demos = await getDemoByProfile(profile);
-  const allProjects: Project[] = [];
+  const allUserProjects: Project[] = [];
   // 将每个demo转换为Project格式
   const profileProjects = demos.map(demo => ({
     id: demo.id.id,
     name: demo.name,
     des: demo.des,
-    profile: profile.name // 使用profile的name作为profile字段
+    profile: profile.name, // 使用profile的name作为profile字段
+    visitor_list: demo.visitor_list // 添加visitor_list字段
   }));
-  console.log("Profile Projects:", profileProjects);
   // 添加到总项目列表
-  allProjects.push(...profileProjects);
-  
-  return allProjects;
+  allUserProjects.push(...profileProjects);
+  console.log("User all Projects:", allUserProjects);
+  return allUserProjects;
 }
 
 // 提供一个同步版本用于初始渲染
@@ -50,6 +57,7 @@ export const mockProjects: Project[] = [
     id: "placeholder-1",
     name: "Loading Projects...",
     des: "Please wait while projects are being loaded",
-    profile: "System"
+    profile: "System",
+    visitor_list: ["0x1234567890abcdef", "0xabcdef1234567890"],
   }
 ];

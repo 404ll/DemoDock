@@ -16,7 +16,9 @@ export interface Project {
     name: string
     des: string
     profile: string
-  }// public struct Profile has key {
+    visitor_list:string[];
+  }
+  // public struct Profile has key {
 //     id: UID,
 //     name: String,
 //     demos: vector<ID>,

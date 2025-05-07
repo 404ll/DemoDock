@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { useCurrentAccount } from "@mysten/dapp-kit"
 import { ConnectButton } from "@mysten/dapp-kit"
 import { ArrowLeft, Download, ExternalLink, Lock, Shield } from "lucide-react"
@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useBetterSignAndExecuteTransaction } from "@/hooks/useBetterTx"
 import { requestDemo } from "@/contracts/query"
-
+import { Profile } from "@/types"
 const MOCK_DEMOS: Record<string, Demo> = {
   demo1: {
     id: "demo1",
@@ -64,8 +64,9 @@ export default function DemoDetailPage() {
   const [demo, setDemo] = useState<Demo | null>(null)
   const [loading, setLoading] = useState(true)
   const [accessStatus, setAccessStatus] = useState<AccessStatus>("none")
+  const router = useRouter() // 添加路由器
 
-  // Fetch demo details
+  // Fetch demo details 更新获取逻辑
   useEffect(() => {
     async function fetchDemoDetails() {
       if (!demoId) return
@@ -80,9 +81,25 @@ export default function DemoDetailPage() {
 
           if (mockDemo) {
             setDemo(mockDemo)
-            // 根据访问类型设置状态
+            
+            // 检查访问权限 - 改进版
             if (mockDemo.accessType === "public") {
+              // 公开的demo直接允许访问
               setAccessStatus("granted")
+            } else {
+              // 私有或受限的demo需要检查访问列表
+              // 模拟访问列表检查 (实际环境应该从API获取)
+              const mockVisitorList = ["0x123", "0x456", account?.address].filter(Boolean)
+              const hasAccess = account && mockVisitorList.includes(account.address)
+              
+              setAccessStatus(hasAccess ? "granted" : "none")
+              
+              // 如果没有权限且不是公开demo，可以考虑重定向
+              if (!hasAccess) {
+                console.log("用户无权访问此Demo")
+                // 可选: 重定向回探索页面
+                // router.push('/explore')
+              }
             }
           }
 
@@ -95,7 +112,7 @@ export default function DemoDetailPage() {
     }
 
     fetchDemoDetails()
-  }, [demoId])
+  }, [demoId, account?.address])
 
 
   // Handle file download
@@ -151,19 +168,20 @@ export default function DemoDetailPage() {
           </CardFooter>
         </Card>
       ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Demo Not Found</CardTitle>
-            <CardDescription>The requested demo could not be found.</CardDescription>
-          </CardHeader>
-          <CardFooter>
-            <Button asChild>
-              <Link href="/explore">Back to Explore</Link>
-            </Button>
-          </CardFooter>
-        </Card>
+        <div className="text-center py-10">
+          <Card>
+            <CardHeader>
+              <CardTitle>Demo Not Found</CardTitle>
+              <CardDescription>The requested demo could not be found.</CardDescription>
+            </CardHeader>
+            <CardFooter>
+              <Button asChild>
+                <Link href="/explore">Back to Explore</Link>
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
       )}
- 
     </div>
   )
 }
