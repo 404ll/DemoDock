@@ -73,8 +73,8 @@ export const downloadAndDecrypt = async (
         if (!response.ok) {
           return null;
         }
-        console.log(`Blob ${blobId} downloaded from Walrus`);
-        console.log(`response`, response);
+        // console.log(`Blob ${blobId} downloaded from Walrus`);
+        // console.log(`response`, response);
         return await response.arrayBuffer();
       } catch (err) {
         console.error(`Blob ${blobId} cannot be retrieved from Walrus`, err);
@@ -103,8 +103,8 @@ export const downloadAndDecrypt = async (
     ids.forEach((id) => moveCallConstructor(tx, id));
     const txBytes = await tx.build({ client: suiClient, onlyTransactionKind: true });
     try {
-      const aa = await sealClient.fetchKeys({ ids, txBytes, sessionKey, threshold: 2 });
-      console.log('Keys fetched successfully',aa);
+      await sealClient.fetchKeys({ ids, txBytes, sessionKey, threshold: 2 });
+      // console.log('Keys fetched successfully',aa);
     } catch (err) {
       console.log(err);
       const errorMsg =

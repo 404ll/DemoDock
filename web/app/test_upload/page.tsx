@@ -1,6 +1,5 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { SuiClient } from '@mysten/sui/client';
 import { 
   Card, 
   Flex, 
@@ -19,9 +18,10 @@ import { WalrusUpload } from '@/components/seal/EncrtptAndUpload';
 import { fromHex } from '@mysten/sui/utils';
 import { downloadAndDecrypt } from '@/components/seal/utils';
 import { getCapByDemoId, getFeedDataByDemoId } from "@/contracts/query";
-import { useCurrentAccount, useSignPersonalMessage } from "@mysten/dapp-kit";
+import { useCurrentAccount, useSignPersonalMessage,useSuiClient } from "@mysten/dapp-kit";
 
 export default function TestUploadPage() {
+  const suiClient = useSuiClient();
   const currentAccount = useCurrentAccount();
   const [policyId, setPolicyId] = useState('');
   const [capId, setCapId] = useState('');
@@ -65,7 +65,7 @@ export default function TestUploadPage() {
           const result = await getFeedDataByDemoId(demoId);
           setDemoId(demoId);
           setBlobIds(result.blobIds);
-          console.log("获取到的Blob ID:", result.blobIds);
+          // console.log("获取到的Blob ID:", result.blobIds);
         } catch (error) {
           console.error("获取Blob ID失败:", error);
         }
@@ -81,7 +81,7 @@ export default function TestUploadPage() {
     verifyKeyServers: false,
   });
 
-  console.log("keyserver:", getAllowlistedKeyServers('testnet'));
+  // console.log("keyserver:", getAllowlistedKeyServers('testnet'));
   const constructMoveCall = (demoId: string) => {
     return (tx: Transaction, id: string) => {
       tx.moveCall({
@@ -225,14 +225,35 @@ export default function TestUploadPage() {
         <Tabs.Content value="decrypt">
           <Card style={{ padding: '20px', margin: '16px 0' }}>
             <Flex direction="column" gap="3">
-  
-              
-              <Button 
-                onClick={handleDecrypt}
-                disabled={isDecrypting || !demoId || blobIds.length === 0}
-              >
-                {isDecrypting ? '解密中...' : '解密文件'}
-              </Button>
+              <Flex gap="3">
+                <Button 
+                  onClick={handleDecrypt}
+                  disabled={isDecrypting || !demoId || blobIds.length === 0}
+                >
+                  {isDecrypting ? '解密中...' : '解密并预览文件'}
+                </Button>
+                
+                <Button 
+                  onClick={async () => {
+                    await handleDecrypt();
+                    // 等待解密完成后，尝试下载文件
+                    setTimeout(() => {
+                      if (decryptedFileUrls.length > 0) {
+                        const link = document.createElement('a');
+                        link.href = decryptedFileUrls[0].url;
+                        link.download = `decrypted-file.${decryptedFileUrls[0].type.includes('video') ? 'mp4' : 'bin'}`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                      }
+                    }, 1500);
+                  }}
+                  disabled={isDecrypting || !demoId || blobIds.length === 0}
+                  variant="soft"
+                >
+                  解密并下载文件
+                </Button>
+              </Flex>
               
               {error && (
                 <Text color="red" size="2">{error}</Text>

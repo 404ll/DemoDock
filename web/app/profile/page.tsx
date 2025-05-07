@@ -75,7 +75,6 @@ export default function ProjectPage() {
         if (projects.length > 0) {
           setSelectedProject(projects[0]);
           // 默认已有访问权限
-          console.log("获取到的项目:", projects[0]);
           setHasAccess(true);
         }
         
@@ -86,7 +85,8 @@ export default function ProjectPage() {
           id: "default-1",
           name: "示例项目",
           des: "这是一个默认示例项目，由于无法获取您的真实项目而创建",
-          profile: account.address.slice(0, 8)
+          profile: account.address.slice(0, 8),
+          visitor_list:[]
         }];
         
         setUserProjects(fallbackProjects);
@@ -207,10 +207,9 @@ export default function ProjectPage() {
                             <FileText className="h-5 w-5 text-muted-foreground" />
                             <div>
                               <p className="font-medium">项目源代码</p>
-                                          <Button variant="link" 
-                                onClick={() => router.push(`/upload?demoId=${selectedProject.id}`)}
-                              >              Upload files
-                                          </Button>                            </div>
+            <Button variant="link" onClick={() => router.push("/upload")}>
+              Upload files
+            </Button>                            </div>
                           </div>
                           <Button size="sm" variant="ghost" className="gap-2">
                             <Download className="h-4 w-4" />
