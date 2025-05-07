@@ -17,6 +17,7 @@ const EDuplicate: u64 = 2;
 const MARKER: u64 = 3;
 const ERROR_PROFILE_EXISTS: u64 = 4;
 const EDEMO_NOT_EXISTS: u64 = 5;
+const ENoAccess: u64 = 6;
 
 //=====Structs=====
 public struct Demo has key {
@@ -144,8 +145,8 @@ public fun approve_internal(
     }
 }
 
-entry fun seal_approve(id: vector<u8>, allowlist: &Allowlist, ctx: &TxContext) {
-    assert!(approve_internal(ctx.sender(), id, allowlist), ENoAccess);
+entry fun seal_approve(id: vector<u8>, demo: &Demo, adminlist: &AdminList, ctx: &TxContext) {
+    assert!(approve_internal(ctx.sender(), demo, id, adminlist), ENoAccess);
 }
 
 public fun publish(demo: &mut Demo, cap: &Cap, blob_id: String) {
