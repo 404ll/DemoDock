@@ -90,7 +90,7 @@ export default function CreatePage() {
     }
 
     fetchCapId();
-  }, [currentAccount]);
+  }, [currentAccount,selectedDemoId]);
 
 
   return (
