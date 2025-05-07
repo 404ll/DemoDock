@@ -67,12 +67,14 @@ export const downloadAndDecrypt = async (
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 10000);
         const randomAggregator = aggregators[Math.floor(Math.random() * aggregators.length)];
-        const aggregatorUrl = `/${randomAggregator}/v1/blobs/${blobId}`;
+        const aggregatorUrl = `/api/${randomAggregator}/v1/blobs/${blobId}`;
         const response = await fetch(aggregatorUrl, { signal: controller.signal });
         clearTimeout(timeout);
         if (!response.ok) {
           return null;
         }
+        console.log(`Blob ${blobId} downloaded from Walrus`);
+        console.log(`response`, response);
         return await response.arrayBuffer();
       } catch (err) {
         console.error(`Blob ${blobId} cannot be retrieved from Walrus`, err);
@@ -101,7 +103,8 @@ export const downloadAndDecrypt = async (
     ids.forEach((id) => moveCallConstructor(tx, id));
     const txBytes = await tx.build({ client: suiClient, onlyTransactionKind: true });
     try {
-      await sealClient.fetchKeys({ ids, txBytes, sessionKey, threshold: 2 });
+      const aa = await sealClient.fetchKeys({ ids, txBytes, sessionKey, threshold: 2 });
+      console.log('Keys fetched successfully',aa);
     } catch (err) {
       console.log(err);
       const errorMsg =

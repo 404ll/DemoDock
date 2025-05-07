@@ -1,6 +1,6 @@
 "use client";
-import React, { useState,useEffect } from 'react';
-import { useSuiClient } from '@mysten/dapp-kit';
+import React, { useState, useEffect } from 'react';
+import { SuiClient } from '@mysten/sui/client';
 import { 
   Card, 
   Flex, 
@@ -14,32 +14,35 @@ import {
 import { SealClient, SessionKey } from '@mysten/seal';
 import { getAllowlistedKeyServers } from '@mysten/seal';
 import { Transaction } from '@mysten/sui/transactions';
-import { networkConfig } from '@/contracts/index';
+import { networkConfig, suiClient } from '@/contracts/index';
 import { WalrusUpload } from '@/components/seal/EncrtptAndUpload';
+import { fromHex } from '@mysten/sui/utils';
 import { downloadAndDecrypt } from '@/components/seal/utils';
-import {getCapByDemoId} from "@/contracts/query"
-import { useCurrentAccount } from "@mysten/dapp-kit"
+import { getCapByDemoId, getFeedDataByDemoId } from "@/contracts/query";
+import { useCurrentAccount, useSignPersonalMessage } from "@mysten/dapp-kit";
 
 export default function TestUploadPage() {
   const currentAccount = useCurrentAccount();
-  const suiClient = useSuiClient();
   const [policyId, setPolicyId] = useState('');
   const [capId, setCapId] = useState('');
-  const [allowlistId, setAllowlistId] = useState('');
+  const [demoId, setDemoId] = useState('');
   const [blobIds, setBlobIds] = useState<string[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [decryptedFileUrls, setDecryptedFileUrls] = useState<{url: string; type: string}[]>([]);
+  const [decryptedFileUrls, setDecryptedFileUrls] = useState<{ url: string; type: string }[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [isDecrypting, setIsDecrypting] = useState(false);
+  const [currentSessionKey, setCurrentSessionKey] = useState<SessionKey | null>(null);
+
+  const { mutate: signPersonalMessage } = useSignPersonalMessage();
 
   const packageId = networkConfig.testnet.variables.Package;
-  // const demoCapId = await getCapByDemoId(currentAccount?.address ?? "00",demoId);
+
   useEffect(() => {
     async function fetchCapId() {
       if (currentAccount?.address) {
         try {
-          const demoId = "0xb6082813aab7ec2f5ed2f79018e9fadd51967f051142571fd7291b0455545526";
+          const demoId = "0x0567810580f7b472f4034543b75097486c1ecac8c85050cde00192a848369522";
           const result = await getCapByDemoId(currentAccount.address, demoId);
           setCapId(result);
           setPolicyId(demoId);
@@ -50,73 +53,121 @@ export default function TestUploadPage() {
         }
       }
     }
-    
-    fetchCapId();
-  }, [currentAccount?.address]);
 
-  // 创建SealClient
+    fetchCapId();
+  }, [currentAccount]);
+
+  useEffect(() => {
+    async function fetchBlobId() {
+      if (currentAccount?.address) {
+        try {
+          const demoId = "0x0567810580f7b472f4034543b75097486c1ecac8c85050cde00192a848369522";
+          const result = await getFeedDataByDemoId(demoId);
+          setDemoId(demoId);
+          setBlobIds(result.blobIds);
+          console.log("获取到的Blob ID:", result.blobIds);
+        } catch (error) {
+          console.error("获取Blob ID失败:", error);
+        }
+      }
+    }
+
+    fetchBlobId();
+  }, [currentAccount]);
+
   const sealClient = new SealClient({
     suiClient,
     serverObjectIds: getAllowlistedKeyServers('testnet'),
     verifyKeyServers: false,
   });
 
-  // 构建Move调用函数
-  const constructMoveCall = (allowlistId: string) => {
+  console.log("keyserver:", getAllowlistedKeyServers('testnet'));
+  const constructMoveCall = (demoId: string) => {
     return (tx: Transaction, id: string) => {
       tx.moveCall({
         target: `${packageId}::demo::seal_approve`,
-        arguments: [tx.pure.string(id), tx.object(allowlistId)],
+        arguments: [tx.pure.vector('u8', fromHex(id)), tx.object(demoId), tx.object(networkConfig.testnet.variables.AdminList)],
       });
     };
   };
 
-  // 解密文件函数
   const handleDecrypt = async () => {
-    if (!allowlistId || blobIds.length === 0) {
+    if (!demoId || blobIds.length === 0) {
       setError('请输入允许列表ID和Blob ID');
       return;
     }
-    
+
     setIsDecrypting(true);
     setError(null);
-    
-    try {
-      // 创建新的会话密钥
-      const sessionKey = new SessionKey({
-        address: '0x0', // 这里会在签名过程中被替换
-        packageId,
-        ttlMin: 10,
-      });
-      
-      // 使用用户选择的服务
-      const moveCallConstructor = constructMoveCall(allowlistId);
-      
-      // 修改downloadAndDecrypt函数以使用选定的服务
-      await downloadAndDecrypt(
+
+    if (
+      currentSessionKey &&
+      !currentSessionKey.isExpired() &&
+      currentSessionKey.getAddress() === currentAccount?.address
+    ) {
+      const moveCallConstructor = constructMoveCall(demoId);
+      downloadAndDecrypt(
         blobIds,
-        sessionKey,
+        currentSessionKey,
         suiClient,
         sealClient,
         moveCallConstructor,
         setError,
         setDecryptedFileUrls,
         setIsDialogOpen,
-        setReloadKey
+        setReloadKey,
+      );
+      return;
+    }
+
+    setCurrentSessionKey(null);
+
+    const sessionKey = new SessionKey({
+      address: currentAccount?.address ?? '0x0',
+      packageId,
+      ttlMin: 10,
+    });
+
+    try {
+      signPersonalMessage(
+        {
+          message: sessionKey.getPersonalMessage(),
+        },
+        {
+          onSuccess: async (result) => {
+            await sessionKey.setPersonalMessageSignature(result.signature);
+            const moveCallConstructor = constructMoveCall(demoId);
+            await downloadAndDecrypt(
+              blobIds,
+              sessionKey,
+              suiClient,
+              sealClient,
+              moveCallConstructor,
+              setError,
+              setDecryptedFileUrls,
+              setIsDialogOpen,
+              setReloadKey,
+            );
+            setCurrentSessionKey(sessionKey);
+            setIsDecrypting(false);
+          },
+          onError: (error) => {
+            console.error('签名失败:', error);
+            setError(`签名失败: ${error.message}`);
+            setIsDecrypting(false);
+          }
+        }
       );
     } catch (error: any) {
-      console.error('解密失败:', error);
-      setError(`解密失败: ${error.message}`);
-    } finally {
+      console.error('Error:', error);
       setIsDecrypting(false);
     }
   };
 
-  // 媒体项组件
   const MediaItem = ({ fileUrl, mimeType, index }: { fileUrl: string, mimeType: string, index: number }) => {
     const isVideo = mimeType.startsWith('video/');
     const isPPT = mimeType.includes('powerpoint') || mimeType.includes('presentation');
-    
+
     return (
       <div className="media-item" style={{ marginBottom: '20px' }}>
         <Text size="2" weight="bold">文件 {index + 1}</Text>
@@ -174,24 +225,11 @@ export default function TestUploadPage() {
         <Tabs.Content value="decrypt">
           <Card style={{ padding: '20px', margin: '16px 0' }}>
             <Flex direction="column" gap="3">
-              <Text size="2">请输入Allowlist ID和Blob ID</Text>
-              <input
-                type="text"
-                placeholder="Allowlist ID"
-                value={allowlistId}
-                onChange={(e) => setAllowlistId(e.target.value)}
-                style={{ padding: '8px' }}
-              />
-              <textarea
-                placeholder="Blob IDs (每行一个)"
-                value={blobIds.join('\n')}
-                onChange={(e) => setBlobIds(e.target.value.split('\n').filter(id => id.trim() !== ''))}
-                style={{ padding: '8px', height: '100px' }}
-              />
+  
               
               <Button 
                 onClick={handleDecrypt}
-                disabled={isDecrypting || !allowlistId || blobIds.length === 0}
+                disabled={isDecrypting || !demoId || blobIds.length === 0}
               >
                 {isDecrypting ? '解密中...' : '解密文件'}
               </Button>

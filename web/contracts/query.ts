@@ -238,6 +238,25 @@ export const getDemoByProfile = async (profile: Profile) => {
 
 }
 
+export const getFeedDataByDemoId = async (id: string) => {
+  const demo = await suiClient.getObject({
+    id: id!,
+    options: { showContent: true },
+  });
+  const encryptedObjects = await suiClient
+    .getDynamicFields({
+      parentId: id!,
+    })
+    .then((res) => res.data.map((obj) => obj.name.value as string));
+
+  const fields = (demo.data?.content as { fields: any })?.fields || {};
+  const feedData = {
+    DemoId: id!,
+    DemoName: fields?.name,
+    blobIds: encryptedObjects,
+  };
+  return feedData;
+}
 //public fun create_profile(name: String, state: &mut State, ctx: &mut TxContext) {
 //   let profile = Profile {
 //     id: object::new(ctx),
@@ -355,18 +374,19 @@ export const getAdminApplication = async (address:string):Promise<DemoRequest[]>
       MoveEventType: `${networkConfig.testnet.variables.Package}::demo::DemoRequest`,
     }
   });
+  console.log("events",events.data);
   const requests: DemoRequest[] = [];
   for (const event of events.data) {
     const requestEvent = event.parsedJson as DemoRequest;
-    
+    console.log("requestEvent",requestEvent);
     try {
       // 获取demo对象
-      const owner = await getDemoOwner(requestEvent.demo_id);
+      // const owner = await getDemoOwner(requestEvent.demo_id);
       
       // 检查demo所有者是否与传入地址匹配
-      if (owner === address) {
+      // if (owner === address) {
         requests.push(requestEvent);
-      }
+      // }
     } catch (error) {
       console.error(`处理请求事件时出错: ${error}`);
       // 继续处理下一个事件
@@ -396,7 +416,9 @@ export const getDemoOwner = async (demo_id:string):Promise<string> => {
      transactionBlock: tx,
      sender: normalizeSuiAddress('0x0'),
    });
-
+   console.log("res",bcs.Address.parse(
+    new Uint8Array(res?.results[0]?.returnValues[0][0]),
+  ));
    return bcs.Address.parse(
     new Uint8Array(res?.results[0]?.returnValues[0][0]),
   );
