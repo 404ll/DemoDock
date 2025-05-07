@@ -1,6 +1,5 @@
 import { isValidSuiAddress } from "@mysten/sui/utils";
 import { SuiObjectResponse, SuiParsedData } from "@mysten/sui/client";
-import { categorizeSuiObjects, CategorizedObjects } from "@/utils/assetsHelpers";
 import { suiClient ,networkConfig,createBetterTxFactory} from "./index";
 import { useSuiClient } from "@mysten/dapp-kit";
 import { getAllowlistedKeyServers, SealClient } from "@mysten/seal";
@@ -201,7 +200,7 @@ export const getProfileByUser = async (address: string) => {
 
 
 //通过demo获取capId
-export const getCapByDemoId = async (address: string,id: string) => {
+export const getCapByDemoId = async (address: string, id: string) => {
       const res = await suiClient.getOwnedObjects({
         owner: address,
         options: {

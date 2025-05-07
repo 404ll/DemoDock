@@ -80,19 +80,6 @@ export function Navbar() {
           </Link>
         </div>
 
-        {account && DemoAccount&&(
-          <nav className="hidden md:flex gap-6">
-            <Link
-              href="/explore"
-              className={cn(
-                "text-sm font-medium transition-colors hover:text-primary",
-                pathname === "/explore" ? "text-primary" : "text-muted-foreground",
-              )}
-            >
-            </Link>
-          </nav>
-        )}
-
         <div className="flex items-center gap-4">
           {account ? (
             <>
