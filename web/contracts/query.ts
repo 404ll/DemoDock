@@ -373,19 +373,22 @@ export const getAdminApplication = async (address:string):Promise<DemoRequest[]>
       MoveEventType: `${networkConfig.testnet.variables.Package}::demo::DemoRequest`,
     }
   });
-  console.log("events",events.data);
   const requests: DemoRequest[] = [];
   for (const event of events.data) {
     const requestEvent = event.parsedJson as DemoRequest;
-    console.log("requestEvent",requestEvent);
     try {
-      // 获取demo对象
-      // const owner = await getDemoOwner(requestEvent.demo_id);
+      // 检查requestEvent.demo_id是否存在
+      if (!requestEvent || !requestEvent.demo_id) {
+        console.error("无效的请求事件数据:", requestEvent);
+        continue;
+      }
       
+      // 获取demo对象
+      const owner = await getDemoOwner(requestEvent.demo_id);
       // 检查demo所有者是否与传入地址匹配
-      // if (owner === address) {
+      if (owner === address) {
         requests.push(requestEvent);
-      // }
+      }
     } catch (error) {
       console.error(`处理请求事件时出错: ${error}`);
       // 继续处理下一个事件
@@ -407,7 +410,7 @@ export const getDemoOwner = async (demo_id:string):Promise<string> => {
     package: networkConfig.testnet.variables.Package,
     module: "demo",
     function: "get_demo_owner",
-    arguments: [tx.pure.string(demo_id), tx.object(networkConfig.testnet.variables.DemoPool)]
+    arguments: [tx.pure.id(demo_id), tx.object(networkConfig.testnet.variables.DemoPool)]
   })
    // @ts-ignore
    const res: DevInspectResults =
@@ -415,9 +418,14 @@ export const getDemoOwner = async (demo_id:string):Promise<string> => {
      transactionBlock: tx,
      sender: normalizeSuiAddress('0x0'),
    });
-   console.log("res",bcs.Address.parse(
-    new Uint8Array(res?.results[0]?.returnValues[0][0]),
-  ));
+   
+   // 添加更健壮的错误处理
+   if (!res || !res.results || !res.results[0] || !res.results[0].returnValues || 
+       !res.results[0].returnValues[0] || !res.results[0].returnValues[0][0]) {
+     console.error("无效的响应结构:", JSON.stringify(res, null, 2));
+     throw new Error("无法获取Demo所有者，响应结构无效");
+   }
+   
    return bcs.Address.parse(
     new Uint8Array(res?.results[0]?.returnValues[0][0]),
   );
