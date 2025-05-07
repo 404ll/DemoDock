@@ -6,10 +6,10 @@ type NetworkType = 'testnet' | 'mainnet';
 
 const configs = {
     testnet: {
-        Package: "0xbc78a9140025d4f9bcfd01c6a392ed851b523ad2b8403a25cde4f4c7245811ca",
-        DemoPool:"0xd561b734acee218ac4ba50d05bb75f441f47d8e546c0556aa8d608298cf76d33",
-        State:"0x5a865c349ae2dc63e5b157e596da098a3e94bce2ab8befbf9d4e97cb3d815118",
-        AdminList:"0x17f538eb3cba660d1c5f4fb6f4f43a6b1204bb862f04e02f08fb37e751b438cc",
+        Package: "0x4fa82a5f92a9eec6c658dd49edb91b973132ce0039ac186460af4dfea717862b",
+        DemoPool:"0x0897c9347be1a5ae71ba25d2a76dbf17b52bd209ef4c80cf7037c15636ae14af",
+        State:"0x27f71c857194984006223f1ba7f14b70a1fa2b2128634d68c11cbab65761ea25",
+        AdminList:"0xe9081a505a803ad842facadc77ff7e052fdfbc1c8fb562a0177cdb10174c9057",
     },
     mainnet: {
         Package: "0x1111111111111111111111111111111111111111",
