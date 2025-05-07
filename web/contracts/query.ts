@@ -7,7 +7,7 @@ import { getAllowlistedKeyServers, SealClient } from "@mysten/seal";
 import { Transaction } from '@mysten/sui/transactions';
 import { normalizeSuiAddress } from '@mysten/sui/utils';
 import { bcs } from '@mysten/sui/bcs';
-import { Demo, DemoPool, Profile, ProfileCreated, State } from "@/types";
+import { Demo, DemoPool, Profile, ProfileCreated, State,DemoRequest } from "@/types";
 
 export const SUI_VIEW_OBJECT_URL = `https://suiscan.xyz/testnet/object`;
 
@@ -226,7 +226,6 @@ export const getCapByDemoId = async (address: string,id: string) => {
       .map((item) => item.id) as string[];
       console.log("CapId",capId);
       return capId[0];
-
 };
 
 export const getDemoByProfile = async (profile: Profile) => {
@@ -349,7 +348,59 @@ export const getAdminList = async (): Promise<string[]> => {
   }
 };
 
+//获取单个管理员接收的申请
+export const getAdminApplication = async (address:string):Promise<DemoRequest[]> => {
+  const events = await suiClient.queryEvents({
+    query:{
+      MoveEventType: `${networkConfig.testnet.variables.Package}::demo::DemoRequest`,
+    }
+  });
+  const requests: DemoRequest[] = [];
+  for (const event of events.data) {
+    const requestEvent = event.parsedJson as DemoRequest;
+    
+    try {
+      // 获取demo对象
+      const owner = await getDemoOwner(requestEvent.demo_id);
+      
+      // 检查demo所有者是否与传入地址匹配
+      if (owner === address) {
+        requests.push(requestEvent);
+      }
+    } catch (error) {
+      console.error(`处理请求事件时出错: ${error}`);
+      // 继续处理下一个事件
+    }
+  }
+  
+  return requests;
+}
 
+//获取demo的所有者
+// public fun get_demo_owner(demo_id: ID, pool: &DemoPool): address {
+//   assert!(table::contains(&pool.demos, demo_id), EDEMO_NOT_EXISTS);
+//   let address = table::borrow(&pool.demos, demo_id);
+//   *address
+// }
+export const getDemoOwner = async (demo_id:string):Promise<string> => {
+  const tx = new Transaction();
+  tx.moveCall({
+    package: networkConfig.testnet.variables.Package,
+    module: "demo",
+    function: "get_demo_owner",
+    arguments: [tx.pure.string(demo_id), tx.object(networkConfig.testnet.variables.DemoPool)]
+  })
+   // @ts-ignore
+   const res: DevInspectResults =
+   await suiClient.devInspectTransactionBlock({
+     transactionBlock: tx,
+     sender: normalizeSuiAddress('0x0'),
+   });
+
+   return bcs.Address.parse(
+    new Uint8Array(res?.results[0]?.returnValues[0][0]),
+  );
+}
 
 // public fun add_admin(
 //   _super_admin: &SuperAdminCap,
