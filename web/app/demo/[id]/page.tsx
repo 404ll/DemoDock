@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { useCurrentAccount } from "@mysten/dapp-kit"
+import { useCurrentAccount, useSignPersonalMessage, useSuiClient } from "@mysten/dapp-kit"
 import { ConnectButton } from "@mysten/dapp-kit"
 import { ArrowLeft, Download, ExternalLink, Lock, Shield } from "lucide-react"
 import Link from "next/link"
@@ -11,13 +11,18 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useBetterSignAndExecuteTransaction } from "@/hooks/useBetterTx"
-import { getdemoByid } from "@/contracts/query"
+import { getdemoByid, getCapByDemoId, getFeedDataByDemoId } from "@/contracts/query"
 import { Demo, Profile, Project } from "@/types"
-
+import { SealClient, SessionKey } from '@mysten/seal'
+import { getAllowlistedKeyServers } from '@mysten/seal'
+import { Transaction } from '@mysten/sui/transactions'
+import { networkConfig } from '@/contracts/index'
+import { fromHex } from '@mysten/sui/utils'
+import { downloadAndDecrypt } from '@/components/seal/utils'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 
 // Access status type
 type AccessStatus = "granted" | "pending" | "denied" | "none"
-
 
 export default function DemoDetailPage() {
   const params = useParams()
@@ -25,10 +30,22 @@ export default function DemoDetailPage() {
   const account = useCurrentAccount()
   const [demo, setDemo] = useState<Demo | null>(null)
   const [loading, setLoading] = useState(true)
-  
-  const router = useRouter() // 添加路由器
+  const suiClient = useSuiClient()
+  const router = useRouter()
 
-  // Fetch demo details 更新获取逻辑
+  const [isDecrypting, setIsDecrypting] = useState(false)
+  const [blobIds, setBlobIds] = useState<string[]>([])
+  const [capId, setCapId] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  const [decryptedFileUrls, setDecryptedFileUrls] = useState<{ url: string; type: string }[]>([])
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
+  const [currentSessionKey, setCurrentSessionKey] = useState<SessionKey | null>(null)
+
+  const { mutate: signPersonalMessage } = useSignPersonalMessage()
+  const packageId = networkConfig.testnet.variables.Package
+
+  // Fetch demo details
   useEffect(() => {
     async function fetchDemoDetails() {
       if (!demoId) return
@@ -43,9 +60,21 @@ export default function DemoDetailPage() {
           return
         }
         setDemo(demoData)
-        console.log("Demo data fetched:", demoData) 
+
+        if (account?.address) {
+          try {
+            const capResult = await getCapByDemoId(account.address, demoId)
+            setCapId(capResult)
+
+            const feedData = await getFeedDataByDemoId(demoId)
+            setBlobIds(feedData.blobIds)
+            console.log("获取到的BlobIDs:", feedData.blobIds)
+          } catch (error) {
+            console.error("获取解密信息失败:", error)
+          }
+        }
+
         setLoading(false)
-       
       } catch (error) {
         console.error("Error fetching demo details:", error)
         setLoading(false)
@@ -55,12 +84,158 @@ export default function DemoDetailPage() {
     fetchDemoDetails()
   }, [demoId, account?.address])
 
+  const constructMoveCall = (demoId: string) => {
+    return (tx: Transaction, id: string) => {
+      tx.moveCall({
+        target: `${packageId}::demo::seal_approve`,
+        arguments: [tx.pure.vector('u8', fromHex(id)), tx.object(demoId), tx.object(networkConfig.testnet.variables.AdminList)],
+      });
+    };
+  };
 
-  // Handle file download
-  const handleDownload = () => {
-    //解密逻辑
+  const handleDownload = async () => {
+    if (!demoId || !account?.address) {
+      setError("请先连接钱包");
+      return;
+    }
+
+    if (blobIds.length === 0) {
+      setError("该Demo没有可下载的文件");
+      return;
+    }
+
+    setIsDecrypting(true);
+    setError(null);
+
+    const sealClient = new SealClient({
+      suiClient,
+      serverObjectIds: getAllowlistedKeyServers('testnet'),
+      verifyKeyServers: false,
+    });
+
+    if (
+      currentSessionKey &&
+      !currentSessionKey.isExpired() &&
+      currentSessionKey.getAddress() === account?.address
+    ) {
+      const moveCallConstructor = constructMoveCall(demoId);
+      downloadAndDecrypt(
+        blobIds,
+        currentSessionKey,
+        suiClient,
+        sealClient,
+        moveCallConstructor,
+        setError,
+        setDecryptedFileUrls,
+        setIsDialogOpen,
+        setReloadKey,
+      );
+      setIsDecrypting(false);
+      return;
+    }
+
+    setCurrentSessionKey(null);
+    const sessionKey = new SessionKey({
+      address: account?.address ?? '0x0',
+      packageId,
+      ttlMin: 10,
+    });
+
+    try {
+      signPersonalMessage(
+        {
+          message: sessionKey.getPersonalMessage(),
+        },
+        {
+          onSuccess: async (result) => {
+            await sessionKey.setPersonalMessageSignature(result.signature);
+            const moveCallConstructor = constructMoveCall(demoId);
+            await downloadAndDecrypt(
+              blobIds,
+              sessionKey,
+              suiClient,
+              sealClient,
+              moveCallConstructor,
+              setError,
+              setDecryptedFileUrls,
+              setIsDialogOpen,
+              setReloadKey,
+            );
+            setCurrentSessionKey(sessionKey);
+            setIsDecrypting(false);
+          },
+          onError: (error) => {
+            console.error('签名失败:', error);
+            setError(`签名失败: ${error.message}`);
+            setIsDecrypting(false);
+          }
+        }
+      );
+    } catch (error: any) {
+      console.error('Error:', error);
+      setIsDecrypting(false);
+      setError(`处理过程出错: ${error.message}`);
+    }
   }
 
+  const MediaItem = ({ fileUrl, mimeType, index }: { fileUrl: string, mimeType: string, index: number }) => {
+    const isVideo = mimeType.startsWith('video/');
+    const isPPT = mimeType.includes('powerpoint') || mimeType.includes('presentation');
+    const [loadError, setLoadError] = useState(false);
+
+    return (
+      <div className="media-item my-4 border rounded-lg p-4">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-medium">文件 {index + 1} ({mimeType})</h3>
+          <Button size="sm" variant="outline" asChild>
+            <a 
+              href={fileUrl} 
+              download={`demo-file-${index}.${isVideo ? 'mp4' : isPPT ? 'pptx' : 'bin'}`}
+            >
+              下载文件
+            </a>
+          </Button>
+        </div>
+        
+        {isVideo ? (
+          !loadError ? (
+            <video 
+              controls 
+              width="100%" 
+              src={fileUrl}
+              className="max-h-[300px] rounded bg-gray-100"
+              onError={() => setLoadError(true)}
+            >
+              您的浏览器不支持视频播放。
+            </video>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-[200px] bg-gray-100 rounded">
+              <p className="text-gray-500">视频加载失败，请使用下载按钮查看</p>
+            </div>
+          )
+        ) : isPPT ? (
+          <div className="text-center p-6 border rounded">
+            <p>PowerPoint文件</p>
+          </div>
+        ) : (
+          <div>
+            {!loadError ? (
+              <img 
+                src={fileUrl} 
+                alt={`解密文件 ${index + 1}`} 
+                className="max-w-full max-h-[300px]"
+                onError={() => setLoadError(true)}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center h-[200px] bg-gray-100 rounded">
+                <p className="text-gray-500">文件预览失败，请使用下载按钮查看</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="container max-w-4xl py-8">
@@ -102,10 +277,28 @@ export default function DemoDetailPage() {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-3">
-            <Button className="w-full" variant="outline" onClick={handleDownload}>
-              <Download className="mr-2 h-4 w-4" />
-              Download Demo Files
+            <Button 
+              className="w-full" 
+              variant="outline" 
+              onClick={handleDownload}
+              disabled={isDecrypting || blobIds.length === 0}
+            >
+              {isDecrypting ? (
+                <>
+                  <span className="animate-spin mr-2">◌</span>
+                  解密中...
+                </>
+              ) : (
+                <>
+                  <Download className="mr-2 h-4 w-4" />
+                  解密并下载Demo文件
+                </>
+              )}
             </Button>
+            
+            {error && (
+              <p className="text-sm text-red-500 mt-2">{error}</p>
+            )}
           </CardFooter>
         </Card>
       ) : (
@@ -123,6 +316,55 @@ export default function DemoDetailPage() {
           </Card>
         </div>
       )}
+      
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>解密文件预览</DialogTitle>
+            <DialogDescription>
+              解密成功！您现在可以预览或下载这些文件。
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="overflow-y-auto max-h-[60vh]">
+            {decryptedFileUrls.length > 0 ? (
+              <div className="flex flex-col gap-4">
+                {decryptedFileUrls.map((file, index) => (
+                  <MediaItem 
+                    key={`${index}-${reloadKey}`}
+                    fileUrl={file.url} 
+                    mimeType={file.type} 
+                    index={index} 
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="text-center py-8 text-gray-500">没有找到可预览的文件</p>
+            )}
+          </div>
+          
+          <div className="flex justify-end gap-2 mt-4">
+            {decryptedFileUrls.length > 0 && (
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  const link = document.createElement('a');
+                  link.href = decryptedFileUrls[0].url;
+                  link.download = `demo-file.${decryptedFileUrls[0].type.includes('video') ? 'mp4' : 'bin'}`;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                }}
+              >
+                下载文件
+              </Button>
+            )}
+            <Button onClick={() => setIsDialogOpen(false)}>
+              关闭
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
