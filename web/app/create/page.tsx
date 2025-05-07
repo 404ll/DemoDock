@@ -61,6 +61,7 @@ export default function CreatePage() {
         profile: profile.id.id 
       }).onSuccess(async (result) => {
         console.log("Demo created:", result)
+        
       // 显示成功信息
       setShowSuccess(true)
     }).execute()
@@ -87,9 +88,6 @@ export default function CreatePage() {
             <AlertDescription>
               Your project has been created successfully
             </AlertDescription>
-            <Button variant="link" onClick={() => router.push("/upload")}>
-              Upload files
-            </Button>
           </Alert>
         ) : (
           <form onSubmit={handleSubmit}>

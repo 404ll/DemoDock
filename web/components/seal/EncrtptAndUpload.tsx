@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { Transaction } from '@mysten/sui/transactions';
 import { networkConfig } from '@/contracts/index';
 import { useSignAndExecuteTransaction, useSuiClient } from '@mysten/dapp-kit';
-import { Button, Card, Flex, Spinner, Text } from '@radix-ui/themes';
+import { AlertCircle, FileUp, Upload, Check, Link, ExternalLink } from 'lucide-react';
+import { Button, Card, Flex, Text, Badge, Box, Progress, Separator } from '@radix-ui/themes';
 import { getAllowlistedKeyServers, SealClient } from '@mysten/seal';
 import { fromHex, toHex } from '@mysten/sui/utils';
+import { useRouter } from 'next/navigation';
 
 export type Data = {
   status: string;
@@ -37,7 +39,12 @@ export function WalrusUpload({ policyObject, cap_id, moduleName }: WalrusUploadP
   const [file, setFile] = useState<File | null>(null);
   const [info, setInfo] = useState<Data | null>(null);
   const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [selectedService, setSelectedService] = useState<string>('service1');
+  const [uploadStep, setUploadStep] = useState<'idle' | 'encrypting' | 'uploading' | 'binding' | 'complete'>('idle');
+  const [error, setError] = useState<string | null>(null);
+  
+  const router = useRouter();
 
   const SUI_VIEW_TX_URL = `https://suiscan.xyz/testnet/tx`;
   const SUI_VIEW_OBJECT_URL = `https://suiscan.xyz/testnet/object`;
@@ -116,23 +123,18 @@ export function WalrusUpload({ policyObject, cap_id, moduleName }: WalrusUploadP
 
   const handleFileChange = (event: any) => {
     const file = event.target.files[0];
-    // 扩大文件大小限制到100MB
     if (file.size > 100 * 1024 * 1024) {
       alert('文件大小必须小于100MB');
       return;
     }
     
-    // 更新文件类型验证，添加PPT格式
     const validTypes = [
-      // 图片类型
       'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
-      // 视频类型
       'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime',
-      // PPT类型
-      'application/vnd.ms-powerpoint',                                // .ppt
-      'application/vnd.openxmlformats-officedocument.presentationml.presentation', // .pptx
-      'application/vnd.openxmlformats-officedocument.presentationml.slideshow',    // .ppsx
-      'application/vnd.openxmlformats-officedocument.presentationml.template'      // .potx
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'application/vnd.openxmlformats-officedocument.presentationml.slideshow',
+      'application/vnd.openxmlformats-officedocument.presentationml.template'
     ];
     
     if (!validTypes.some(type => file.type === type)) {
@@ -144,41 +146,118 @@ export function WalrusUpload({ policyObject, cap_id, moduleName }: WalrusUploadP
     setInfo(null);
   };
 
-  const handleSubmit = () => {
+  const handleUploadAndBind = async () => {
+    if (!file) {
+      setError('请先选择文件');
+      return;
+    }
+    
+    if (!policyObject || !cap_id) {
+      setError('缺少必要的项目配置');
+      return;
+    }
+    
     setIsUploading(true);
-    if (file) {
+    setUploadStep('encrypting');
+    setUploadProgress(10);
+    setError(null);
+    
+    try {
       const reader = new FileReader();
+      
       reader.onload = async function (event) {
         if (event.target && event.target.result) {
           const result = event.target.result;
           if (result instanceof ArrayBuffer) {
-            const nonce = crypto.getRandomValues(new Uint8Array(5));
-            const policyObjectBytes = fromHex(policyObject);
-            const id = toHex(new Uint8Array([...policyObjectBytes, ...nonce]));
-            const { encryptedObject: encryptedBytes } = await client.encrypt({
-              threshold: 2,
-              packageId,
-              id,
-              data: new Uint8Array(result),
-            });
-            const storageInfo = await storeBlob(encryptedBytes);
-            displayUpload(storageInfo.info, file.type);
-            setIsUploading(false);
+            try {
+              setUploadProgress(30);
+              const nonce = crypto.getRandomValues(new Uint8Array(5));
+              const policyObjectBytes = fromHex(policyObject);
+              const id = toHex(new Uint8Array([...policyObjectBytes, ...nonce]));
+              
+              const { encryptedObject: encryptedBytes } = await client.encrypt({
+                threshold: 2,
+                packageId,
+                id,
+                data: new Uint8Array(result),
+              });
+              
+              setUploadStep('uploading');
+              setUploadProgress(60);
+              
+              const storageInfo = await storeBlob(encryptedBytes);
+              const uploadInfo = displayUpload(storageInfo.info, file.type);
+              
+              setUploadStep('binding');
+              setUploadProgress(80);
+              
+              await publishToContract(policyObject, cap_id, moduleName, uploadInfo.blobId);
+              
+              setUploadStep('complete');
+              setUploadProgress(100);
+              
+              setTimeout(() => {
+                router.push('/explore');
+              }, 2000);
+              
+            } catch (error: any) {
+              console.error('处理过程中出错:', error);
+              setError(`上传失败: ${error.message}`);
+              setUploadStep('idle');
+              setIsUploading(false);
+            }
           } else {
-            console.error('Unexpected result type:', typeof result);
+            setError('文件格式不支持');
+            setUploadStep('idle');
             setIsUploading(false);
           }
         }
       };
+      
       reader.readAsArrayBuffer(file);
-    } else {
-      console.error('No file selected');
+      
+    } catch (error: any) {
+      setError(`上传过程出错: ${error.message}`);
+      setUploadStep('idle');
+      setIsUploading(false);
     }
   };
 
-  const displayUpload = (storage_info: any, media_type: any) => {
+  const publishToContract = (wl_id: string, cap_id: string, moduleName: string, blobId: string) => {
+    return new Promise<void>((resolve, reject) => {
+      try {
+        const tx = new Transaction();
+        tx.moveCall({
+          target: `${packageId}::${moduleName}::publish`,
+          arguments: [tx.object(wl_id), tx.object(cap_id), tx.pure.string(blobId)],
+        });
+
+        tx.setGasBudget(10000000);
+        
+        signAndExecute(
+          {
+            transaction: tx,
+          },
+          {
+            onSuccess: async (result) => {
+              console.log('合约绑定成功:', result);
+              resolve();
+            },
+            onError: (error) => {
+              console.error('合约绑定失败:', error);
+              setError(`绑定失败: ${error.message}`);
+              reject(error);
+            }
+          },
+        );
+      } catch (error) {
+        reject(error);
+      }
+    });
+  };
+
+  const displayUpload = (storage_info: any, media_type: any): Data => {
     let info;
-    // 检测是否是PPT文件
     const isPPT = media_type.includes('powerpoint') || 
                  media_type.includes('presentation') ||
                  media_type.endsWith('.ppt') || 
@@ -216,6 +295,7 @@ export function WalrusUpload({ policyObject, cap_id, moduleName }: WalrusUploadP
       throw Error('Unhandled successful response!');
     }
     setInfo(info);
+    return info;
   };
 
   const storeBlob = (encryptedData: Uint8Array) => {
@@ -228,7 +308,6 @@ export function WalrusUpload({ policyObject, cap_id, moduleName }: WalrusUploadP
     return fetch(url, {
       method: 'PUT',
       body: encryptedData,
-      // 添加请求头调试
       headers: {
         'Content-Type': 'application/octet-stream'
       }
@@ -253,111 +332,200 @@ export function WalrusUpload({ policyObject, cap_id, moduleName }: WalrusUploadP
     });
   };
 
-  async function handlePublish(wl_id: string, cap_id: string, moduleName: string) {
-    const tx = new Transaction();
-    tx.moveCall({
-      target: `${packageId}::${moduleName}::publish`,
-      arguments: [tx.object(wl_id), tx.object(cap_id), tx.pure.string(info!.blobId)],
-    });
-
-    tx.setGasBudget(10000000);
-    signAndExecute(
-      {
-        transaction: tx,
-      },
-      {
-        onSuccess: async (result) => {
-          console.log('res', result);
-          alert('Blob attached successfully, now share the link or upload more.');
-        },
-      },
-    );
-  }
-
   return (
-    <Card>
-      <Flex direction="column" gap="2" align="start">
-        <Flex gap="2" align="center">
-          <Text>Select Walrus service:</Text>
-          <select
-            value={selectedService}
-            onChange={(e) => setSelectedService(e.target.value)}
-            aria-label="Select Walrus service"
-          >
-            {services.map((service) => (
-              <option key={service.id} value={service.id}>
-                {service.name}
-              </option>
-            ))}
-          </select>
-        </Flex>
-        <input
-          type="file"
-          onChange={handleFileChange}
-          accept="image/*,video/*,.ppt,.pptx,.ppsx,.potx,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation"
-          aria-label="选择文件上传"
-        />
-        <p>文件大小限制为100MB。支持图片、视频和PowerPoint文件。</p>
-        <Button
-          onClick={() => {
-            handleSubmit();
-          }}
-          disabled={file === null}
-        >
-          First step: Encrypt and upload to Walrus
-        </Button>
-        {isUploading && (
-          <div role="status">
-            <Spinner className="animate-spin" aria-label="Uploading" />
-            <span>
-              Uploading to Walrus (may take a few seconds, retrying with different service is
-              possible){' '}
-            </span>
-          </div>
+    <Card className="p-6 shadow-md">
+      <Flex direction="column" gap="4">
+        <Box>
+          <Text size="5" weight="bold" className="mb-2">上传加密文件</Text>
+          <Text size="2" color="gray">
+            上传后的文件将被加密并存储在Walrus服务上，自动绑定到您的项目
+          </Text>
+        </Box>
+        
+        <Separator size="4" />
+        
+        <Card className="p-4 border-2 border-blue-100">
+          <Flex direction="column" gap="3">
+            <Flex gap="2" align="center" className="mb-2">
+              <Text size="2">Walrus服务提供商:</Text>
+              <select
+                value={selectedService}
+                onChange={(e) => setSelectedService(e.target.value)}
+                className="px-3 py-1 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                aria-label="Select Walrus service"
+                disabled={isUploading}
+              >
+                {services.map((service) => (
+                  <option key={service.id} value={service.id}>
+                    {service.name}
+                  </option>
+                ))}
+              </select>
+            </Flex>
+            
+            <Box className={`border-2 border-dashed ${isUploading ? 'border-gray-300 bg-gray-50' : 'border-blue-300 hover:bg-blue-50'} rounded-lg p-6 text-center transition-colors`}>
+              <Flex direction="column" align="center" gap="2">
+                <FileUp size={32} className={isUploading ? "text-gray-400" : "text-blue-400"} />
+                
+                {!isUploading ? (
+                  <>
+                    <Text size="2" as="label" htmlFor="file-upload" className="cursor-pointer">
+                      <span className="text-blue-500 font-medium">点击选择文件</span>
+                      <span> 或拖放文件到此处</span>
+                    </Text>
+                    
+                    <input
+                      id="file-upload"
+                      type="file"
+                      onChange={handleFileChange}
+                      accept="image/*,video/*,.ppt,.pptx,.ppsx,.potx,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                      className="hidden"
+                      aria-label="选择文件上传"
+                      disabled={isUploading}
+                    />
+                  </>
+                ) : (
+                  <Text size="2" color="gray">文件处理中，请稍候...</Text>
+                )}
+                
+                {file && (
+                  <Badge color="green" className="mt-2">
+                    已选择: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                  </Badge>
+                )}
+                
+                <Text size="1" color="gray">
+                  文件大小限制为100MB。支持图片、视频和PowerPoint文件。
+                </Text>
+              </Flex>
+            </Box>
+            
+            {error && (
+              <Flex gap="2" align="center" className="p-3 bg-red-50 rounded-md">
+                <AlertCircle size={16} className="text-red-500" />
+                <Text size="2" color="red">{error}</Text>
+              </Flex>
+            )}
+            
+            {isUploading && (
+              <Box className="p-4 border border-blue-100 rounded-md bg-blue-50">
+                <Flex direction="column" gap="2">
+                  <Flex justify="between">
+                    <Text size="2" weight="medium">
+                      {uploadStep === 'encrypting' && '正在加密文件...'}
+                      {uploadStep === 'uploading' && '正在上传到Walrus...'}
+                      {uploadStep === 'binding' && '正在绑定到项目...'}
+                      {uploadStep === 'complete' && '处理完成!'}
+                    </Text>
+                    <Text size="2">{uploadProgress}%</Text>
+                  </Flex>
+                  
+                  <Progress value={uploadProgress} max={100} size="2" 
+                    color={uploadStep === 'complete' ? 'green' : 'blue'} />
+                  
+                  <Text size="1" color="gray">
+                    {uploadStep === 'encrypting' && '加密确保文件安全...'}
+                    {uploadStep === 'uploading' && '上传到分布式存储中...'}
+                    {uploadStep === 'binding' && '将文件绑定到您的项目...'}
+                    {uploadStep === 'complete' && '所有步骤完成，即将跳转...'}
+                  </Text>
+                </Flex>
+              </Box>
+            )}
+            
+            <Button
+  onClick={handleUploadAndBind}
+  disabled={!file || isUploading || !policyObject || !cap_id}
+  className="mt-2 relative overflow-hidden group transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-70 disabled:shadow-none"
+  style={{
+    background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+    border: 'none',
+    padding: '12px 20px',
+    borderRadius: '8px',
+  }}
+  size="3"
+>
+  <Flex gap="2" align="center" className="relative z-10">
+    {isUploading ? (
+      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+    ) : (
+      <Upload size={18} className="text-white group-hover:scale-110 transition-transform duration-300" />
+    )}
+    <Text 
+      size="3" 
+      className="text-white font-medium group-hover:translate-x-1 transition-transform duration-300"
+    >
+      {isUploading ? '处理中...' : '加密上传并绑定到项目'}
+    </Text>
+  </Flex>
+  
+  {/* 添加悬停时的波纹效果 */}
+  <div className="absolute top-0 left-0 w-full h-full opacity-0 group-hover:opacity-20 transition-opacity duration-300 bg-white rounded-[100%] scale-0 group-hover:scale-150 origin-center transform-gpu" style={{ 
+    transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)' 
+  }}></div>
+  
+  {/* 添加禁用状态的蒙版 */}
+  {(!file || !policyObject || !cap_id) && (
+    <div className="absolute inset-0 bg-gray-500 bg-opacity-40 backdrop-filter backdrop-blur-[1px] rounded-lg"></div>
+  )}
+</Button>
+          </Flex>
+        </Card>
+        
+        {uploadStep === 'complete' && info && (
+          <Box className="p-4 bg-green-50 border-2 border-green-100 rounded-md">
+            <Flex direction="column" gap="3">
+              <Flex align="center" gap="2">
+                <Check size={18} className="text-green-600" />
+                <Text size="3" weight="medium" color="green">处理完成!</Text>
+              </Flex>
+              
+              <Separator size="1" className="my-1" />
+              
+              <Flex gap="2" align="center">
+                <Text size="2">文件ID:</Text>
+                <Badge variant="soft" color="gray" size="1">
+                  {info.blobId.substring(0, 16)}...
+                </Badge>
+              </Flex>
+              
+              <Flex gap="3">
+                <Button size="1" variant="soft" asChild>
+                  <a
+                    href={info.blobUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Flex gap="1" align="center">
+                      <Link size={12} /> 
+                      查看加密文件
+                    </Flex>
+                  </a>
+                </Button>
+                
+                <Button size="1" variant="soft" asChild>
+                  <a
+                    href={info.suiUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Flex gap="1" align="center">
+                      <ExternalLink size={12} /> 
+                      查看区块链记录
+                    </Flex>
+                  </a>
+                </Button>
+              </Flex>
+              
+              <Text size="2" color="green">
+                上传和绑定成功，即将跳转到浏览页面...
+              </Text>
+            </Flex>
+          </Box>
         )}
-
-        {info && file && (
-          <div id="uploaded-blobs" role="region" aria-label="Upload details">
-            <dl>
-              <dt>Status:</dt>
-              <dd>{info.status}</dd>
-              <dd>
-                <a
-                  href={info.blobUrl}
-                  style={{ textDecoration: 'underline' }}
-                  download
-                  onClick={(e) => {
-                    e.preventDefault();
-                    window.open(info.blobUrl, '_blank', 'noopener,noreferrer');
-                  }}
-                  aria-label="Download encrypted blob"
-                >
-                  Encrypted blob
-                </a>
-              </dd>
-              <dd>
-                <a
-                  href={info.suiUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ textDecoration: 'underline' }}
-                  aria-label="View Sui object details"
-                >
-                  Sui Object
-                </a>
-              </dd>
-            </dl>
-          </div>
-        )}
-        <Button
-          onClick={() => {
-            handlePublish(policyObject, cap_id, moduleName);
-          }}
-          disabled={!info || !file || policyObject === ''}
-          aria-label="Encrypt and upload file"
-        >
-          Second step: Associate file to Sui object
-        </Button>
       </Flex>
     </Card>
   );
