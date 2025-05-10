@@ -24,6 +24,8 @@ public struct Demo has key {
     id: UID,
     name: String,
     des: String,
+    repo: String,
+    demo_type: String,
     visitor_list: vector<address>,
 }
 
@@ -61,6 +63,8 @@ fun init(ctx: &mut TxContext) {
 public fun create_demo(
     name: String,
     des: String,
+    repo: String,
+    demo_type: String,
     pool: &mut DemoPool,
     profile: &mut Profile,
     ctx: &mut TxContext,
@@ -71,6 +75,8 @@ public fun create_demo(
         visitor_list: vector::empty(),
         name: name,
         des: des,
+        repo: repo,
+        demo_type: demo_type,
     };
 
     let cap = Cap {
@@ -95,11 +101,13 @@ public fun create_demo(
 entry fun create_demo_entry(
     name: String,
     des: String,
+    repo: String,
+    demo_type: String, 
     pool: &mut DemoPool,
     profile: &mut Profile,
     ctx: &mut TxContext,
 ) {
-    transfer::transfer(create_demo(name, des, pool, profile, ctx), ctx.sender());
+    transfer::transfer(create_demo(name, des,repo, demo_type, pool, profile, ctx), ctx.sender());
 }
 
 public fun add_visitor_by_user(demo: &mut Demo, cap: &Cap, account: address) {
