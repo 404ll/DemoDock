@@ -5,10 +5,10 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Filter, Search, SlidersHorizontal, Loader2, X } from "lucide-react"
+import { Filter, Search, Loader2, X } from "lucide-react"
 import ProjectCard from "@/components/project-card"
 import { loadMockProjects } from "@/lib/mock-data"
-import { Project } from "@/types/index"
+import type { Project } from "@/types/index"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,11 +17,18 @@ import {
 } from "@/components/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { PROJECT_TYPES } from "@/types/index"
+import { StatsOverview } from "@/components/state-overview"
 
 // 添加这个辅助函数来获取类型标签
 const getTypeLabel = (typeValue: string): string => {
   const typeObj = PROJECT_TYPES.find((t) => t.value === typeValue)
   return typeObj ? typeObj.label : typeValue
+}
+
+// 添加一个函数来获取唯一开发者数量
+const getUniqueDevelopers = (projects: Project[]): number => {
+  const uniqueProfiles = new Set(projects.map((project) => project.profile))
+  return uniqueProfiles.size
 }
 
 export default function ExplorePage() {
@@ -32,6 +39,7 @@ export default function ExplorePage() {
   const [error, setError] = useState<string | null>(null)
   const [selectedType, setSelectedType] = useState<string | null>(null)
   const [availableTypes, setAvailableTypes] = useState<string[]>([])
+  const [totalDevelopers, setTotalDevelopers] = useState(0)
 
   useEffect(() => {
     async function fetchProjects() {
@@ -56,6 +64,9 @@ export default function ExplorePage() {
         setAvailableTypes(types)
         setProjects(adaptedProjects)
         setFilteredProjects(adaptedProjects)
+
+        // 计算唯一开发者数量
+        setTotalDevelopers(getUniqueDevelopers(adaptedProjects))
       } catch (err) {
         console.error("Failed to load projects:", err)
         setError("无法加载项目数据，请稍后再试")
@@ -85,9 +96,7 @@ export default function ExplorePage() {
       if (selectedType === "other") {
         // 当选择"other"时，显示所有不在预定义类型列表中的项目
         const predefinedTypeValues = PROJECT_TYPES.map((t) => t.value)
-        filtered = filtered.filter(
-          (project) => !predefinedTypeValues.includes(project.type) || project.type === "test",
-        )
+        filtered = filtered.filter((project) => !predefinedTypeValues.includes(project.type) || project.type === "test")
       } else {
         // 正常过滤逻辑 - 显示特定类型
         filtered = filtered.filter((project) => project.type === selectedType)
@@ -116,6 +125,9 @@ export default function ExplorePage() {
           <h1 className="text-3xl font-bold">Explore Projects</h1>
           <p className="text-muted-foreground">Discover the latest demos from Web3 developers</p>
         </div>
+
+        {/* 添加统计概览组件 */}
+        <StatsOverview totalProjects={projects.length} totalDevelopers={totalDevelopers} className="mb-2" />
 
         <div className="flex flex-col gap-4 sm:flex-row">
           <div className="relative flex-1">
@@ -189,7 +201,7 @@ export default function ExplorePage() {
           {!loading && filteredProjects.length === 0 && (
             <div className="flex justify-center items-center h-60">
               <p className="text-muted-foreground">
-                {selectedType === "other" 
+                {selectedType === "other"
                   ? "没有找到自定义类型的项目"
                   : selectedType
                     ? `没有找到类型为 "${getTypeLabel(selectedType)}" 的项目`
