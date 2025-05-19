@@ -1,15 +1,15 @@
 "use client"
 
 import type React from "react"
-import { useState,useEffect } from "react"
-import {getCapByDemoId} from "@/contracts/query"
-import {WalrusUpload} from "@/components/seal/EncrtptAndUpload"
-import { useSearchParams } from 'next/navigation';
+import { useState, useEffect, Suspense } from "react"
+import { getCapByDemoId } from "@/contracts/query"
+import { WalrusUpload } from "@/components/seal/EncrtptAndUpload"
 import { useCurrentAccount } from "@mysten/dapp-kit"
 
-
-
-export default function CreatePage() {
+// 分离出使用 useSearchParams 的内部组件
+function UploadContent() {
+  // 导入移到组件内部
+  const { useSearchParams } = require('next/navigation');
   const searchParams = useSearchParams();
   const demoId = searchParams.get('demoId');
   const currentAccount = useCurrentAccount()
@@ -17,14 +17,13 @@ export default function CreatePage() {
   const [capId, setCapId] = useState('')
   const [selectedDemoId, setSelectedDemoId] = useState<string | null>(null)
 
-
   // 从URL获取demoId并只设置一次
   useEffect(() => {
     if (demoId) {
       console.log("从URL获取到Demo ID:", demoId);
       setSelectedDemoId(demoId);
     }
-  }, []); // 空依赖数组，只在组件挂载时执行一次
+  }, [demoId]); // 添加demoId作为依赖
   
   useEffect(() => {
     async function fetchCapId() {
@@ -51,17 +50,25 @@ export default function CreatePage() {
     }
   }, [currentAccount?.address, selectedDemoId]);
 
+  return (
+    <WalrusUpload 
+      policyObject={policyId} 
+      cap_id={capId} 
+      moduleName="demo" 
+    />
+  );
+}
 
+// 主页面组件
+export default function UploadPage() {
   return (
     <div className="container py-8">
-      <div className="mx-auto max-w-2xl"> 
-        {/* 只保留WalrusUpload组件 */}
-        <WalrusUpload 
-          policyObject={policyId} 
-          cap_id={capId} 
-          moduleName="demo" 
-        />
+      <div className="mx-auto max-w-2xl">
+        <Suspense fallback={<div className="text-center p-4">加载中...</div>}>
+          <UploadContent />
+        </Suspense>
       </div>
     </div>
-  );
+
+  )
 }
