@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// 实际的Walrus服务端点
+// Walrus 节点映射表
 const WALRUS_ENDPOINTS: { [key: string]: string } = {
   'publisher1': 'https://publisher.walrus-testnet.walrus.space',
   'publisher2': 'https://wal-publisher-testnet.staketab.org',
@@ -16,39 +16,28 @@ const WALRUS_ENDPOINTS: { [key: string]: string } = {
   'aggregator6': 'https://walrus-testnet-aggregator.everstake.one',
 };
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { path: string[] } }
-) {
-  return handleRequest(request, params.path, 'GET');
+export async function GET(request: NextRequest) {
+  return handleRequest(request, 'GET');
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { path: string[] } }
-) {
-  return handleRequest(request, params.path, 'PUT');
+export async function POST(request: NextRequest) {
+  return handleRequest(request, 'POST');
 }
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { path: string[] } }
-) {
-  return handleRequest(request, params.path, 'POST');
+export async function PUT(request: NextRequest) {
+  return handleRequest(request, 'PUT');
 }
 
-async function handleRequest(
-  request: NextRequest,
-  pathSegments: string[],
-  method: string
-) {
+async function handleRequest(request: NextRequest, method: string) {
+  const { pathname, search } = request.nextUrl;
+
+  // /api/[...path] => 获取 [...path]
+  const pathSegments = pathname.split('/').slice(2); // 忽略空和 api
+
   console.log('✅ API请求已接收:', method, pathSegments);
   console.log('🔍 请求URL:', request.url);
 
-  // 第一段路径应该是服务名称（如publisher1, aggregator2等）
   const serviceName = pathSegments[0];
-  
-  // 保留完整路径，包括v1
   const remainingPath = pathSegments.slice(1).join('/');
 
   if (!WALRUS_ENDPOINTS[serviceName]) {
@@ -56,33 +45,30 @@ async function handleRequest(
     return NextResponse.json({ error: 'Unknown service' }, { status: 404 });
   }
 
-  const targetUrl = `${WALRUS_ENDPOINTS[serviceName]}/${remainingPath}${request.nextUrl.search}`;
-  
-  console.log(`转发请求到: ${targetUrl} (${method})`);
-  
+  const targetUrl = `${WALRUS_ENDPOINTS[serviceName]}/${remainingPath}${search}`;
+
+  console.log(`🚀 正在转发到: ${targetUrl}`);
+
   try {
-    // 创建过滤后的请求头
     const headers = new Headers();
     for (const [key, value] of request.headers.entries()) {
-      // 排除可能导致问题的请求头
       if (!['host', 'connection'].includes(key.toLowerCase())) {
         headers.append(key, value);
       }
     }
-    
-    headers.set('Content-Type', 'application/octet-stream'); 
-    
+
+    headers.set('Content-Type', 'application/octet-stream');
+
     const response = await fetch(targetUrl, {
       method,
-      headers, // 使用过滤后的请求头
+      headers,
       body: method !== 'GET' ? await request.arrayBuffer() : undefined,
       redirect: 'follow',
     });
 
     const responseData = await response.arrayBuffer();
-    
     const contentType = response.headers.get('content-type') || 'application/octet-stream';
-    
+
     return new NextResponse(responseData, {
       status: response.status,
       statusText: response.statusText,
@@ -91,13 +77,12 @@ async function handleRequest(
       },
     });
   } catch (error: unknown) {
-    console.error(`转发请求失败:`, error);
-    const errorMessage = error instanceof Error 
-      ? error.message 
-      : String(error);
-    
-    return NextResponse.json({ 
-      error: `Failed to proxy request: ${errorMessage}` 
-    }, { status: 500 });
+    console.error(`❌ 转发请求失败:`, error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    return NextResponse.json(
+      { error: `Failed to proxy request: ${errorMessage}` },
+      { status: 500 }
+    );
   }
 }
