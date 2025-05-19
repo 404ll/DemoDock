@@ -14,8 +14,7 @@ const VISITOR: address = @0x456;
 
 #[test]
 fun test_create_demo() {
-    let mut scenario_val = test_scenario::begin(USER);
-    let scenario = &mut scenario_val;
+    c
 
     // 初始化
     {
