@@ -472,19 +472,19 @@ export const removeAdmin = createBetterTxFactory<{superAdminCap:string,account: 
 // entry fun create_demo_entry(
 //   name: String,
 //   des: String,
+//   repo: String,
+//   demo_type: String, 
 //   pool: &mut DemoPool,
 //   profile: &mut Profile,
 //   ctx: &mut TxContext,
-// ) {
-//   transfer::transfer(create_demo(name, des, pool, profile, ctx), ctx.sender());
-// }
+// )
 
-export const createDemo = createBetterTxFactory<{ name: string; des: string,profile:string;}>((tx, networkVariables, { name, des,profile }) => {
+export const createDemo = createBetterTxFactory<{ name: string; des: string,repo: string, type:string,profile:string;}>((tx, networkVariables, { name, des,repo,type,profile }) => {
   tx.moveCall({
     package: networkVariables.Package,
     module: "demo",
     function: "create_demo_entry",
-    arguments: [tx.pure.string(name), tx.pure.string(des), tx.object(networkVariables.DemoPool), tx.object(profile)]
+    arguments: [tx.pure.string(name), tx.pure.string(des), tx.pure.string(repo),tx.pure.string(type),tx.object(networkVariables.DemoPool), tx.object(profile)]
 });
   return tx;
 });

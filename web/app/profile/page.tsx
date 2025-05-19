@@ -87,6 +87,8 @@ export default function ProjectPage() {
             id: "default-1",
             name: "示例项目",
             des: "这是一个默认示例项目，由于无法获取您的真实项目而创建",
+            type: "demo",
+            repo: "",
             profile: account.address.slice(0, 8),
             visitor_list: [],
           },
@@ -266,7 +268,7 @@ export default function ProjectPage() {
                     .map((project) => (
                       <Link
                         key={project.id}
-                        href={`/demo/id=${project.id}`}
+                        href={`/demo/${project.id}`}
                         className="flex gap-4 rounded-lg hover:bg-muted/50 p-3 transition-colors border border-transparent hover:border-border"
                       >
                         <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
@@ -283,7 +285,7 @@ export default function ProjectPage() {
                     <div className="text-center p-6 bg-muted/30 rounded-lg">
                       <p className="text-muted-foreground mb-3">You currently only have one demo.</p>
                       <Button asChild size="sm" className="gap-2">
-                        <Link href="/upload">
+                        <Link href="/create">
                           <Upload className="h-4 w-4" />
                           Create New Demo
                         </Link>

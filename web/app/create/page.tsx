@@ -11,12 +11,16 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { FileUploader } from "@/components/file-uploader"
-import { Check,Info} from "lucide-react"
+import { Check, Info, ChevronDown } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { createDemo,getProfileByUser } from "@/contracts/query"
+import { createDemo, getProfileByUser } from "@/contracts/query"
 import { useBetterSignAndExecuteTransaction } from '@/hooks/useBetterTx'
 import { useCurrentAccount } from "@mysten/dapp-kit"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { cn } from "@/lib/utils"
+import {PROJECT_TYPES} from "@/types/index"
+
 
 export default function CreatePage() {
   const router = useRouter()
@@ -25,7 +29,11 @@ export default function CreatePage() {
   const [showSuccess, setShowSuccess] = useState(false)
   const account = useCurrentAccount()
   const { handleSignAndExecuteTransaction: createDemoHandler } = useBetterSignAndExecuteTransaction({ tx: createDemo })
-
+  
+  // 项目类型相关状态
+  const [projectType, setProjectType] = useState("")
+  const [isCustomType, setIsCustomType] = useState(false)
+  const [openTypePopover, setOpenTypePopover] = useState(false)
   
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -42,8 +50,14 @@ export default function CreatePage() {
       const name = formData.get('title') as string
       const des = formData.get('description') as string
       
-      if (!name || !des) {
-        alert("Please fill in all required fields")
+      // 处理项目类型
+      let type = projectType
+      if (isCustomType) {
+        type = formData.get('custom-type') as string
+      }
+      
+      if (!name || !des || !type) {
+        alert("Please fill in all required fields including project type")
         return
       }
       
@@ -58,19 +72,33 @@ export default function CreatePage() {
       createDemoHandler({ 
         name, 
         des, 
-        profile: profile.id.id 
+        repo: formData.get('repo') as string,
+        type: type,
+        profile: profile.id.id
       }).onSuccess(async (result) => {
         console.log("Demo created:", result)
         
-      // 显示成功信息
-      setShowSuccess(true)
-    }).execute()
+        // 显示成功信息
+        setShowSuccess(true)
+      }).execute()
     } catch (error) {
       console.error("Error creating demo:", error)
       alert("Failed to create project. Please try again.")
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  // 处理类型选择
+  const handleTypeSelect = (value: string) => {
+    if (value === "custom") {
+      setIsCustomType(true)
+      setProjectType("")
+    } else {
+      setIsCustomType(false)
+      setProjectType(value)
+    }
+    setOpenTypePopover(false)
   }
 
   return (
@@ -103,15 +131,88 @@ export default function CreatePage() {
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="repo">Project Repo Link</Label>
+                  <Input id="repo" name="repo" placeholder="Enter your project repository URL" required />
+                </div>
+
+                {/* 添加项目类型字段 */}
+                <div className="space-y-2">
+                  <Label htmlFor="type">Project Type</Label>
+                  <div className="relative">
+                    {isCustomType ? (
+                      <div className="flex gap-2">
+                        <Input 
+                          id="custom-type" 
+                          name="custom-type" 
+                          placeholder="Enter custom project type" 
+                          className="flex-1" 
+                          required 
+                        />
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          onClick={() => setIsCustomType(false)}
+                          className="whitespace-nowrap"
+                        >
+                          Use Preset
+                        </Button>
+                      </div>
+                    ) : (
+                      <Popover open={openTypePopover} onOpenChange={setOpenTypePopover}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={openTypePopover}
+                            className="w-full justify-between"
+                          >
+                            {projectType ? 
+                              PROJECT_TYPES.find(type => type.value === projectType)?.label 
+                              : "Select project type"}
+                            <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[300px] p-0">
+                          <Command>
+                            <CommandInput placeholder="Search project type..." />
+                            <CommandList>
+                              <CommandEmpty>No type found.</CommandEmpty>
+                              <CommandGroup>
+                                {PROJECT_TYPES.map(type => (
+                                  <CommandItem
+                                    key={type.value}
+                                    value={type.value}
+                                    onSelect={handleTypeSelect}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        projectType === type.value ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    {type.label}
+                                  </CommandItem>
+                                ))}
+                                <CommandItem
+                                  value="custom"
+                                  onSelect={() => handleTypeSelect("custom")}
+                                >
+                                  <Check className="mr-2 h-4 w-4 opacity-0" />
+                                  Enter Custom Type...
+                                </CommandItem>
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
                   <Textarea id="description" name="description" placeholder="Describe your project" className="min-h-[120px]" required />
                 </div>
-
-                {/* <div className="space-y-4">
-                  <Label>Cover Image</Label>
-                  <FileUploader accept="image/*" maxFiles={1} />
-                </div> */}
-                
 
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -122,30 +223,10 @@ export default function CreatePage() {
                     <Switch id="private" checked={isPrivate} onCheckedChange={setIsPrivate} />
                   </div>
 
+                  {/* 私有项目设置 */}
                   {isPrivate && (
                     <div className="rounded-lg border p-4">
-                      <div className="flex items-start gap-4">
-                        <Info className="mt-0.5 h-4 w-4 text-muted-foreground" />
-                        <div className="space-y-3">
-                          <p className="text-sm">
-                            Your project will be encrypted using Seal. Only users you approve will be able to access the
-                            content.
-                          </p>
-                          <div className="space-y-2">
-                            <Label htmlFor="access-type">Access Type</Label>
-                            <Select defaultValue="manual">
-                              <SelectTrigger id="access-type">
-                                <SelectValue placeholder="Select access type" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="manual">Manual Approval</SelectItem>
-                                <SelectItem value="automatic">Automatic (NFT Holders)</SelectItem>
-                                <SelectItem value="token">Token Gated</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                      </div>
+                      {/* 私有项目设置内容 */}
                     </div>
                   )}
                 </div>
@@ -165,3 +246,7 @@ export default function CreatePage() {
     </div>
   )
 }
+
+
+
+

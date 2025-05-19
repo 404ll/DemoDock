@@ -18,6 +18,8 @@ export async function loadMockProjects(): Promise<Project[]> {
       id: demo.id.id,
       name: demo.name,
       des: demo.des,
+      repo: demo.repo as string,
+      type: demo.demo_type as string,
       profile: profile.name ,// 使用profile的name作为profile字段
       visitor_list: demo.visitor_list // 添加visitor_list字段
     }));
@@ -43,6 +45,8 @@ export async function loadMockUserProjects(user:string ): Promise<Project[]> {
     id: demo.id.id,
     name: demo.name,
     des: demo.des,
+    repo: demo.repo as string,
+    type: demo.demo_type as string,
     profile: profile.name, // 使用profile的name作为profile字段
     visitor_list: demo.visitor_list // 添加visitor_list字段
   }));
@@ -52,13 +56,4 @@ export async function loadMockUserProjects(user:string ): Promise<Project[]> {
   return allUserProjects;
 }
 
-// 提供一个同步版本用于初始渲染
-export const mockProjects: Project[] = [
-  {
-    id: "placeholder-1",
-    name: "Loading Projects...",
-    des: "Please wait while projects are being loaded",
-    profile: "System",
-    visitor_list: ["0x1234567890abcdef", "0xabcdef1234567890"],
-  }
-];
+
