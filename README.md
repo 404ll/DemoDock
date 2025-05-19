@@ -1,4 +1,5 @@
 # DemoDock
+
 Where Projects Dock, and Ideas Rock.
 
 
@@ -91,8 +92,8 @@ Where Projects Dock, and Ideas Rock.
 
 | 阶段 | 内容 | 时间周期 |
 |------|------|----------|
-| V1.0 PoC开发 | 文件上传+加密+Card生成+访问请求流程 | 4周 |
-| V1.1 奖励机制与筛选系统 | 点赞、搜索、浏览量统计等 | 2周 |
-| V1.2 与平台集成 & 公测 | 集成Hackathon、Token激励方案 | 2周 |
+| V1.0 PoC开发 | 文件上传+加密+Card生成+访问请求流程 | 2周 |✅
+| V1.1 奖励机制与筛选系统 | 搜索type，demo数量统计统计等 | 1周 | ✅
+| V1.2 与平台集成 & 公测 | 集成Hackathon方案、Token激励方案 以及自动授权方式 | 2周 | 未实现
 
 
