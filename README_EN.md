@@ -1,4 +1,4 @@
-# DemoDock
+# DemoDock ｜ [中文](https://github.com/404ll/DemoDock/blob/main/README.md)
 
 **Where Projects Dock, and Ideas Rock.**
 
