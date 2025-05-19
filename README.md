@@ -1,4 +1,4 @@
-# DemoDock
+# DemoDock | [English](https://github.com/404ll/DemoDock/blob/main/README_EN.md)
 
 Where Projects Dock, and Ideas Rock.
 
