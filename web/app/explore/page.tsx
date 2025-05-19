@@ -18,6 +18,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { PROJECT_TYPES } from "@/types/index"
 import { StatsOverview } from "@/components/state-overview"
+import { getState } from "@/contracts/query"
 
 // 添加这个辅助函数来获取类型标签
 const getTypeLabel = (typeValue: string): string => {
@@ -26,9 +27,9 @@ const getTypeLabel = (typeValue: string): string => {
 }
 
 // 添加一个函数来获取唯一开发者数量
-const getUniqueDevelopers = (projects: Project[]): number => {
-  const uniqueProfiles = new Set(projects.map((project) => project.profile))
-  return uniqueProfiles.size
+const getUniqueDevelopers = async (): Promise<number> => {
+  const state = await getState();
+  return state.profiles.length;
 }
 
 export default function ExplorePage() {
@@ -66,7 +67,8 @@ export default function ExplorePage() {
         setFilteredProjects(adaptedProjects)
 
         // 计算唯一开发者数量
-        setTotalDevelopers(getUniqueDevelopers(adaptedProjects))
+        const uniqueDevelopers = await getUniqueDevelopers()
+        setTotalDevelopers(uniqueDevelopers)
       } catch (err) {
         console.error("Failed to load projects:", err)
         setError("无法加载项目数据，请稍后再试")
