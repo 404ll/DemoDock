@@ -30,7 +30,7 @@ export default function AdminPage() {
   const [admins, setAdmins] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const isAdmin = getSuperAdmin(account?.address!); 
+  const [isAdmin, setIsAdmin] = useState(false) // 改为状态，而不是直接调用
   const [isSubmittingAdd, setIsSubmittingAdd] = useState(false)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [newAdminAddress, setNewAdminAddress] = useState("")
@@ -42,12 +42,30 @@ export default function AdminPage() {
     tx: removeAdmin,
   })
 
-  // Move fetchSubAdmins outside the useEffect so it can be called anywhere in the component
+  // 检查是否是管理员
+  useEffect(() => {
+    async function checkAdminStatus() {
+      if (!account?.address) return;
+      
+      try {
+        const adminId = await getSuperAdmin(account.address);
+        setIsAdmin(!!adminId);
+      } catch (err) {
+        console.error("Error checking admin status:", err);
+        setIsAdmin(false);
+      }
+    }
+    
+    checkAdminStatus();
+  }, [account?.address]);
+
+  // 获取子管理员列表
   const fetchSubAdmins = async () => {
+    if (!account?.address) return; // 添加防御性检查
+    
     setLoading(true)
     try {
       const data = await getAdminList();
-
       setAdmins(data);
     } catch (err) {
       console.error("Error fetching sub-admins:", err);
@@ -59,19 +77,24 @@ export default function AdminPage() {
 
   useEffect(() => {
     // 如果用户未连接钱包或不是管理员，重定向到首页
-    if (!account) {
-      router.push("/")
-      return
+    if (typeof window !== 'undefined') { // 仅在客户端执行
+      if (!account) {
+        router.push("/")
+        return
+      }
+      
+      // 移到 checkAdminStatus() 后执行
+      if (isAdmin === false && !loading) { // 确认已经检查过管理员状态
+        router.push("/explore")
+        return
+      }
+      
+      // 只有当确认是管理员并且有账户时才获取子管理员
+      if (isAdmin && account) {
+        fetchSubAdmins();
+      }
     }
-    if (!isAdmin) {
-      router.push("/explore")
-      return
-    }
-    
-    // Fetch the list of sub-admins when the component loads
-    fetchSubAdmins();
-    console.log("Admin list fetched:", admins);
-  }, [account])
+  }, [account, isAdmin, loading])
 
   // 处理添加子管理员
   const handleAddSubAdmin = async () => {
@@ -259,3 +282,4 @@ export default function AdminPage() {
     </div>
   )
 }
+

@@ -167,7 +167,6 @@ export const getProfileByUser = async (address: string) => {
   if (!isValidSuiAddress(address)) {
     throw new Error("Invalid Sui address");
   }
-  
   const profile = await suiClient.getOwnedObjects({
     owner: address,
     filter: {
