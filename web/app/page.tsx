@@ -428,7 +428,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Team Section - Enhanced with better spacing and design */}
+        {/* Team Section - Enhanced with modern responsive design */}
         <section id="team" className="w-full py-20 md:py-28 lg:py-32">
           <div className="container px-4 md:px-6 mx-auto">
             <div className="mx-auto flex max-w-[68rem] flex-col items-center justify-center gap-4 text-center mb-16">
@@ -438,24 +438,79 @@ export default function Home() {
                 The talented individuals behind DemoDock.
               </p>
             </div>
-            <div className="mx-auto max-w-3xl">
-              <Card className="shadow-lg">
-                <CardContent className="p-8">
-                  <div className="flex flex-col md:flex-row gap-8 items-center">
-                    <div className="flex h-32 w-32 items-center justify-center rounded-full bg-primary/10 border-4 border-primary/20">
+            
+            {/* 改为网格布局，响应式适应各种屏幕 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
+              {/* Team Member 1 */}
+              <Card className="shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden group">
+                <div className="h-12 bg-gradient-to-r from-primary/80 to-primary/20 group-hover:from-primary group-hover:to-primary/40 transition-all duration-300"></div>
+                <CardContent className="p-8 pt-10">
+                  <div className="flex flex-col items-center gap-6">
+                    <div className="flex h-32 w-32 items-center justify-center rounded-full bg-primary/10 border-4 border-primary/20 transform group-hover:scale-105 transition-all duration-300 shadow-md">
                       <User className="h-16 w-16 text-primary" />
                     </div>
-                    <div className="space-y-3 text-center md:text-left">
-                      <h3 className="text-2xl font-bold">Elemen</h3>
-                      <p className="text-lg text-zinc-500 dark:text-zinc-400">Project Lead</p>
+                    <div className="space-y-3 text-center">
+                      <h3 className="text-2xl font-bold group-hover:text-primary transition-colors">Elemen</h3>
+                      <p className="text-lg text-zinc-500 dark:text-zinc-400 font-medium">Project Lead</p>
+                      <div className="w-12 h-1 bg-primary/50 mx-auto rounded-full group-hover:w-24 transition-all duration-300"></div>
                       <p className="text-base">
                         Full Stack Developer & Product Manager
                         <br />
                         Blockchain Engineering, Chengdu University of Information Technology
                       </p>
-                      <p className="text-base text-zinc-500 dark:text-zinc-400">
-                      A passionate student on a mission to become a master developer.
-                      Actively learning and building in the blockchain space, with strong interest in the Sui and Move ecosystem.
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                        A passionate student on a mission to become a master developer.
+                        Actively learning and building in the blockchain space, with strong interest in the Sui and Move ecosystem.
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Team Member 2 */}
+              <Card className="shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden group">
+                <div className="h-12 bg-gradient-to-r from-primary/80 to-primary/20 group-hover:from-primary group-hover:to-primary/40 transition-all duration-300"></div>
+                <CardContent className="p-8 pt-10">
+                  <div className="flex flex-col items-center gap-6">
+                    <div className="flex h-32 w-32 items-center justify-center rounded-full bg-primary/10 border-4 border-primary/20 transform group-hover:scale-105 transition-all duration-300 shadow-md">
+                      <User className="h-16 w-16 text-primary" />
+                    </div>
+                    <div className="space-y-3 text-center">
+                      <h3 className="text-2xl font-bold group-hover:text-primary transition-colors">Sy711</h3>
+                      <p className="text-lg text-zinc-500 dark:text-zinc-400 font-medium">UI/UX Designer</p>
+                      <div className="w-12 h-1 bg-primary/50 mx-auto rounded-full group-hover:w-24 transition-all duration-300"></div>
+                      <p className="text-base">
+                        Frontend Developer & UI/UX Designer
+                        <br />
+                        Sui Chinese community volunteer
+                      </p>
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                        Students majoring in blockchain are committed to building sui ecology, focusing on front-end and smart contracts.
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Team Member 3 */}
+              <Card className="shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden group">
+                <div className="h-12 bg-gradient-to-r from-primary/80 to-primary/20 group-hover:from-primary group-hover:to-primary/40 transition-all duration-300"></div>
+                <CardContent className="p-8 pt-10">
+                  <div className="flex flex-col items-center gap-6">
+                    <div className="flex h-32 w-32 items-center justify-center rounded-full bg-primary/10 border-4 border-primary/20 transform group-hover:scale-105 transition-all duration-300 shadow-md">
+                      <User className="h-16 w-16 text-primary" />
+                    </div>
+                    <div className="space-y-3 text-center">
+                      <h3 className="text-2xl font-bold group-hover:text-primary transition-colors">dyingforge</h3>
+                      <p className="text-lg text-zinc-500 dark:text-zinc-400 font-medium">Blockchain Developer</p>
+                      <div className="w-12 h-1 bg-primary/50 mx-auto rounded-full group-hover:w-24 transition-all duration-300"></div>
+                      <p className="text-base">
+                        Frontend Developer & Smart Contract Test
+                        <br />
+                        Sui Chinese community volunteer
+                      </p>
+                      <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                        A driven student dedicated to mastering full-stack development, with a deep focus on blockchain technology—particularly the Sui Network and Move programming language.
                       </p>
                     </div>
                   </div>
